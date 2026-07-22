@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0f">
+    <title>SED Navigator Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a2e;
+            --bg-elevated: #252540;
+            --accent-purple: #8b5cf6;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-orange: #f97316;
+            --accent-pink: #ec4899;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --border-color: rgba(255,255,255,0.08);
+            --danger: #ef4444;
+            --success: #22c55e;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        html, body { background: var(--bg-primary); color: var(--text-primary); overflow: hidden; height: 100vh; width: 100vw; position: fixed; touch-action: manipulation; }
+
+        /* ========== LOGIN SCREEN ========== */
+        .login-screen {
+            position: fixed; inset: 0; z-index: 10000;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #1a103c 50%, var(--bg-primary) 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 24px; transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .login-screen.hidden { opacity: 0; transform: scale(1.05); pointer-events: none; }
+        .login-logo {
+            width: 90px; height: 90px; border-radius: 24px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 40px; margin-bottom: 28px;
+            box-shadow: 0 8px 40px rgba(139,92,246,0.4);
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+        .login-title { font-size: 26px; font-weight: 800; margin-bottom: 6px; background: linear-gradient(135deg,#fff,#c4b5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .login-sub { color: var(--text-muted); font-size: 13px; margin-bottom: 32px; text-align: center; }
+        .login-form { width: 100%; max-width: 340px; }
+        .login-input-wrap {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 16px; padding: 14px 18px; margin-bottom: 12px;
+            transition: all 0.3s ease;
+        }
+        .login-input-wrap:focus-within { border-color: var(--accent-purple); box-shadow: 0 0 0 3px rgba(139,92,246,0.15); }
+        .login-input-wrap label { display: block; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+        .login-input-wrap input {
+            width: 100%; background: none; border: none; color: var(--text-primary);
+            font-size: 15px; outline: none; font-family: inherit;
+        }
+        .login-input-wrap input::placeholder { color: var(--text-muted); }
+        .login-btn {
+            width: 100%; padding: 16px; border-radius: 16px; border: none;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            color: white; font-size: 16px; font-weight: 700; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(139,92,246,0.3);
+            transition: all 0.2s ease; margin-top: 8px;
+        }
+        .login-btn:active { transform: scale(0.97); }
+        .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .login-error {
+            background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+            color: var(--danger); padding: 12px 16px; border-radius: 12px;
+            font-size: 13px; margin-bottom: 16px; display: none;
+        }
+        .login-error.show { display: block; animation: shake 0.4s ease; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+        .login-info {
+            margin-top: 20px; padding: 14px; background: var(--bg-card);
+            border-radius: 14px; border: 1px solid var(--border-color);
+            font-size: 12px; color: var(--text-muted); line-height: 1.6;
+        }
+        .login-info strong { color: var(--text-secondary); }
+
+        /* ========== LOADING ========== */
+        .loading-screen {
+            position: fixed; inset: 0; background: var(--bg-primary); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.6s ease;
+        }
+        .loading-screen.hidden { opacity: 0; pointer-events: none; }
+        .loading-ring {
+            width: 60px; height: 60px; border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: var(--accent-purple);
+            border-right-color: var(--accent-blue);
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 16px; font-weight: 600; color: var(--text-secondary); }
+        .loading-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+        /* ========== APP ========== */
+        .app { height: 100vh; width: 100vw; display: flex; flex-direction: column; position: relative; }
+
+        /* Header */
+        .header {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            padding: 10px 14px;
+            background: linear-gradient(180deg, rgba(10,10,15,0.95) 0%, rgba(10,10,15,0.7) 60%, transparent 100%);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .header-brand { display: flex; align-items: center; gap: 10px; }
+        .header-icon {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 16px; box-shadow: 0 4px 15px rgba(139,92,246,0.4);
+        }
+        .header-title { font-size: 16px; font-weight: 700; }
+        .header-sub { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .header-btn {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            color: var(--text-secondary); display: flex; align-items: center; justify-content: center;
+            font-size: 14px; cursor: pointer; transition: all 0.2s ease; position: relative;
+            -webkit-appearance: none;
+        }
+        .header-btn:active { transform: scale(0.92); background: var(--bg-elevated); }
+        .header-btn.has-badge::after {
+            content: attr(data-count); position: absolute; top: -4px; right: -4px;
+            background: linear-gradient(135deg, var(--accent-orange), var(--danger));
+            color: white; font-size: 9px; font-weight: 700; padding: 2px 5px;
+            border-radius: 10px; min-width: 16px; text-align: center;
+            box-shadow: 0 2px 6px rgba(249,115,22,0.4);
+        }
+        .header-user {
+            font-size: 11px; color: var(--accent-cyan); font-weight: 600;
+            background: rgba(6,182,212,0.1); padding: 4px 10px; border-radius: 20px;
+            border: 1px solid rgba(6,182,212,0.2);
+        }
+
+        /* Map */
+        .map-wrap { flex: 1; position: relative; z-index: 1; }
+        #map { width: 100%; height: 100%; background: #0a0a0f; }
+        .leaflet-container { background: #0a0a0f !important; }
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-card) !important; border: 1px solid var(--border-color) !important;
+            border-radius: 16px !important; box-shadow: 0 20px 60px rgba(0,0,0,0.5) !important;
+            color: var(--text-primary) !important; padding: 0 !important; overflow: hidden;
+        }
+        .leaflet-popup-tip { background: var(--bg-card) !important; border: 1px solid var(--border-color) !important; }
+        .leaflet-popup-content { margin: 0 !important; width: 260px !important; }
+        .leaflet-control-zoom { border: none !important; box-shadow: 0 4px 20px rgba(0,0,0,0.4) !important; }
+        .leaflet-control-zoom a {
+            background: var(--bg-card) !important; color: var(--text-secondary) !important;
+            border: 1px solid var(--border-color) !important; width: 34px !important; height: 34px !important;
+            line-height: 34px !important; font-size: 16px !important;
+        }
+
+        /* Popup */
+        .popup-h { padding: 14px; background: linear-gradient(135deg, var(--bg-elevated), var(--bg-card)); border-bottom: 1px solid var(--border-color); }
+        .popup-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+        .popup-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+        .popup-code { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+        .popup-body { padding: 14px; }
+        .popup-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px; }
+        .popup-row-icon { width: 28px; height: 28px; border-radius: 8px; background: var(--bg-elevated); display: flex; align-items: center; justify-content: center; color: var(--accent-cyan); font-size: 12px; flex-shrink: 0; }
+        .popup-actions { display: flex; gap: 8px; padding: 0 14px 14px; }
+        .popup-btn { flex: 1; padding: 9px; border-radius: 10px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.2s ease; -webkit-appearance: none; }
+        .popup-btn-p { background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); color: white; box-shadow: 0 4px 15px rgba(139,92,246,0.3); }
+        .popup-btn-s { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-color); }
+        .popup-btn:active { transform: scale(0.96); }
+
+        /* Markers */
+        .m-wrap { position: relative; width: 36px; height: 36px; }
+        .m-pin { width: 36px; height: 36px; border-radius: 50% 50% 50% 0; position: absolute; transform: rotate(-45deg); left: 50%; top: 50%; margin: -18px 0 0 -18px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; }
+        .m-pin::after { content: ''; width: 20px; height: 20px; margin: 7px 0 0 7px; background: var(--bg-primary); position: absolute; border-radius: 50%; }
+        .m-icon { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 2; font-size: 12px; color: white; transform: rotate(45deg); margin-top: -2px; }
+        .m-wrap.sel .m-pin { transform: rotate(-45deg) scale(1.3); box-shadow: 0 0 25px currentColor; }
+        .m-pulse { position: absolute; width: 36px; height: 36px; border-radius: 50%; left: 50%; top: 50%; margin: -18px 0 0 -18px; animation: mPulse 2s ease-out infinite; opacity: 0; }
+        @keyframes mPulse { 0%{transform:scale(0.5);opacity:0.8} 100%{transform:scale(2.5);opacity:0} }
+
+        /* User marker */
+        .u-wrap { position: relative; width: 22px; height: 22px; }
+        .u-dot { width: 22px; height: 22px; background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)); border-radius: 50%; border: 3px solid white; box-shadow: 0 0 15px rgba(59,130,246,0.6); position: relative; z-index: 2; }
+        .u-ring { position: absolute; inset: -8px; border: 2px solid var(--accent-blue); border-radius: 50%; animation: uPulse 2s ease-out infinite; }
+        @keyframes uPulse { 0%{transform:scale(0.8);opacity:1} 100%{transform:scale(2);opacity:0} }
+
+        /* FABs */
+        .fabs { position: fixed; right: 14px; bottom: 130px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .fab {
+            width: 52px; height: 52px; border-radius: 50%; border: none;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px; color: white; cursor: pointer;
+            box-shadow: 0 6px 25px rgba(0,0,0,0.4); transition: all 0.3s ease;
+            position: relative; -webkit-appearance: none;
+        }
+        .fab:active { transform: scale(0.9); }
+        .fab-p { background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); box-shadow: 0 6px 25px rgba(139,92,246,0.4); }
+        .fab-s { background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan)); box-shadow: 0 6px 25px rgba(59,130,246,0.4); }
+        .fab-label { position: absolute; right: 60px; background: var(--bg-card); padding: 5px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; white-space: nowrap; opacity: 0; transform: translateX(10px); transition: all 0.3s ease; pointer-events: none; border: 1px solid var(--border-color); }
+        .fab:hover .fab-label { opacity: 1; transform: translateX(0); }
+
+        /* Bottom Sheet */
+        .sheet {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 2000;
+            background: var(--bg-card); border-radius: 24px 24px 0 0;
+            box-shadow: 0 -10px 60px rgba(0,0,0,0.5);
+            transform: translateY(calc(100% - 76px));
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 85vh; display: flex; flex-direction: column;
+        }
+        .sheet.open { transform: translateY(0); }
+        .sheet-handle { width: 36px; height: 4px; background: var(--text-muted); border-radius: 2px; margin: 10px auto; opacity: 0.4; }
+        .sheet-h { padding: 0 18px 14px; display: flex; align-items: center; justify-content: space-between; }
+        .sheet-title { font-size: 18px; font-weight: 700; }
+        .sheet-count { background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+        /* Search */
+        .search-wrap { padding: 0 18px 14px; }
+        .search-box {
+            display: flex; align-items: center; background: var(--bg-elevated);
+            border: 1px solid var(--border-color); border-radius: 14px;
+            padding: 10px 14px; gap: 8px; transition: all 0.3s ease;
+        }
+        .search-box:focus-within { border-color: var(--accent-purple); box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
+        .search-box svg { color: var(--text-muted); width: 16px; height: 16px; flex-shrink: 0; }
+        .search-input { flex: 1; background: none; border: none; color: var(--text-primary); font-size: 14px; outline: none; min-width: 0; }
+        .search-input::placeholder { color: var(--text-muted); }
+        .search-clear { width: 22px; height: 22px; border-radius: 50%; background: var(--bg-card); border: none; color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; opacity: 0; transition: opacity 0.2s; flex-shrink: 0; -webkit-appearance: none; }
+        .search-box.has-val .search-clear { opacity: 1; }
+
+        /* Filters */
+        .filters { padding: 0 18px 14px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+        .filters::-webkit-scrollbar { display: none; }
+        .chip {
+            flex-shrink: 0; padding: 7px 14px; border-radius: 20px;
+            border: 1px solid var(--border-color); background: var(--bg-elevated);
+            color: var(--text-secondary); font-size: 12px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s ease;
+            display: flex; align-items: center; gap: 5px; white-space: nowrap;
+            -webkit-appearance: none;
+        }
+        .chip:active { transform: scale(0.95); }
+        .chip.on { background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); color: white; border-color: transparent; box-shadow: 0 4px 15px rgba(139,92,246,0.3); }
+        .chip-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+        /* SED List */
+        .sed-list { flex: 1; overflow-y: auto; padding: 0 18px; scrollbar-width: none; }
+        .sed-list::-webkit-scrollbar { display: none; }
+        .sed-card {
+            background: var(--bg-elevated); border: 1px solid var(--border-color);
+            border-radius: 14px; padding: 14px; margin-bottom: 10px;
+            display: flex; align-items: flex-start; gap: 12px;
+            transition: all 0.3s ease; cursor: pointer; position: relative; overflow: hidden;
+            animation: slideUp 0.4s ease forwards; opacity: 0;
+        }
+        .sed-card.sel { border-color: var(--card-c, var(--accent-purple)); background: linear-gradient(90deg, rgba(139,92,246,0.08), var(--bg-elevated)); }
+        .sed-card.sel::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--card-c, var(--accent-purple)); }
+        .sed-card:active { transform: scale(0.98); }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .sed-check { width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: transparent; transition: all 0.2s ease; flex-shrink: 0; margin-top: 2px; font-size: 11px; }
+        .sed-card.sel .sed-check { background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); border-color: transparent; color: white; }
+        .sed-info { flex: 1; min-width: 0; }
+        .sed-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sed-meta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); flex-wrap: wrap; }
+        .sed-tag { padding: 2px 7px; border-radius: 5px; font-size: 10px; font-weight: 600; }
+        .sed-dist { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--accent-cyan); font-weight: 600; margin-top: 4px; }
+        .sed-pow { display: flex; align-items: center; gap: 3px; font-size: 11px; color: var(--accent-orange); font-weight: 600; }
+        .sed-acts { display: flex; flex-direction: column; gap: 6px; }
+        .sed-act { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-secondary); display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; transition: all 0.2s ease; -webkit-appearance: none; }
+        .sed-act:active { transform: scale(0.9); background: var(--accent-purple); color: white; }
+
+        .empty { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+        .empty svg { width: 48px; height: 48px; margin-bottom: 14px; opacity: 0.4; }
+        .empty h3 { font-size: 16px; color: var(--text-secondary); margin-bottom: 6px; }
+
+        /* Action Bar */
+        .act-bar {
+            position: fixed; bottom: 0; left: 0; right: 0; z-index: 2500;
+            background: linear-gradient(180deg, transparent 0%, var(--bg-primary) 20%);
+            padding: 18px; transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .act-bar.vis { transform: translateY(0); }
+        .act-bar-in {
+            background: var(--bg-card); border: 1px solid var(--border-color);
+            border-radius: 18px; padding: 14px 18px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
+        }
+        .act-bar-info { display: flex; flex-direction: column; }
+        .act-bar-c { font-size: 16px; font-weight: 700; }
+        .act-bar-l { font-size: 11px; color: var(--text-muted); }
+        .act-bar-btns { display: flex; gap: 8px; }
+        .act-btn { padding: 10px 16px; border-radius: 12px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s ease; -webkit-appearance: none; }
+        .act-btn-p { background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); color: white; box-shadow: 0 4px 20px rgba(139,92,246,0.3); }
+        .act-btn-s { background: var(--bg-elevated); color: var(--text-secondary); border: 1px solid var(--border-color); padding: 10px 14px; }
+        .act-btn:active { transform: scale(0.95); }
+
+        /* Modal */
+        .modal-o { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); z-index: 3000; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-o.on { opacity: 1; pointer-events: all; }
+        .modal-c { background: var(--bg-card); border-radius: 24px 24px 0 0; width: 100%; max-height: 80vh; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
+        .modal-o.on .modal-c { transform: translateY(0); }
+        .modal-h { padding: 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); }
+        .modal-t { font-size: 17px; font-weight: 700; }
+        .modal-x { width: 34px; height: 34px; border-radius: 50%; background: var(--bg-elevated); border: none; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; -webkit-appearance: none; }
+        .modal-b { flex: 1; overflow-y: auto; padding: 18px; scrollbar-width: none; }
+        .modal-b::-webkit-scrollbar { display: none; }
+
+        .r-card { background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 14px; padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; animation: slideUp 0.4s ease forwards; opacity: 0; }
+        .r-num { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+        .r-info { flex: 1; }
+        .r-name { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+        .r-dist { font-size: 11px; color: var(--text-muted); }
+        .r-total { margin-top: 16px; padding: 14px; background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); border-radius: 16px; text-align: center; }
+        .r-total-v { font-size: 22px; font-weight: 800; margin-bottom: 3px; }
+        .r-total-l { font-size: 12px; opacity: 0.9; }
+
+        /* Toast */
+        .toast-w { position: fixed; top: 70px; left: 50%; transform: translateX(-50%) translateY(-100px); z-index: 4000; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; }
+        .toast-w.show { transform: translateX(-50%) translateY(0); }
+        .toast { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 14px; padding: 12px 18px; display: flex; align-items: center; gap: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+        .toast-i { width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; flex-shrink: 0; }
+        .toast-m { font-size: 13px; font-weight: 500; white-space: nowrap; }
+
+        /* Stats */
+        .stats { position: fixed; top: 64px; left: 14px; right: 14px; z-index: 1000; display: flex; gap: 8px; justify-content: center; opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; pointer-events: none; }
+        .stats.vis { opacity: 1; transform: translateY(0); }
+        .stat-p { background: rgba(26,26,46,0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--border-color); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+
+        /* Offline banner */
+        .offline-banner {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 5000;
+            background: linear-gradient(90deg, var(--accent-orange), #f59e0b);
+            color: white; text-align: center; padding: 8px;
+            font-size: 12px; font-weight: 600;
+            transform: translateY(-100%); transition: transform 0.3s ease;
+        }
+        .offline-banner.show { transform: translateY(0); }
+
+        @media (min-width: 768px) {
+            .sheet { max-width: 460px; left: 50%; transform: translateX(-50%) translateY(calc(100% - 76px)); }
+            .sheet.open { transform: translateX(-50%) translateY(0); }
+            .modal-c { max-width: 460px; left: 50%; transform: translateX(-50%) translateY(100%); }
+            .modal-o.on .modal-c { transform: translateX(-50%) translateY(0); }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body>
+    <!-- Offline Banner -->
+    <div class="offline-banner" id="offlineBanner">⚠️ Sin conexión a internet</div>
+
+    <!-- LOGIN SCREEN -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-logo">⚡</div>
+        <div class="login-title">SED Navigator</div>
+        <div class="login-sub">Ingresa tu licencia para acceder<br>al sistema de subestaciones</div>
+        <div class="login-form">
+            <div class="login-error" id="loginError"></div>
+            <div class="login-input-wrap">
+                <label>Clave de Licencia</label>
+                <input type="text" id="licenseKey" placeholder="Ej: GOLD-2026-ABC123" autocomplete="off">
+            </div>
+            <button class="login-btn" id="loginBtn" onclick="doLogin()">
+                <span id="loginBtnText">Ingresar</span>
+            </button>
+            <div class="login-info">
+                <strong>🔒 Seguridad:</strong> Tu licencia se valida contra el servidor.<br>
+                Cada dispositivo se registra automáticamente.<br>
+                Máximo de dispositivos según tu plan.
+            </div>
+        </div>
+    </div>
+
+    <!-- LOADING -->
+    <div class="loading-screen hidden" id="loadScreen">
+        <div class="loading-ring"></div>
+        <div class="loading-text" id="loadText">Cargando...</div>
+        <div class="loading-sub" id="loadSub">Conectando al servidor</div>
+    </div>
+
+    <!-- APP -->
+    <div class="app" id="app" style="display:none;">
+        <header class="header" id="header">
+            <div class="header-brand">
+                <div class="header-icon">⚡</div>
+                <div>
+                    <div class="header-title">SED Navigator</div>
+                    <div class="header-sub" id="headerSub">Cargando...</div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <div class="header-user" id="headerUser" style="display:none;"></div>
+                <button class="header-btn" id="btnLayers" onclick="toggleSheet()" title="Lista">☰</button>
+                <button class="header-btn" id="btnSel" data-count="0" onclick="toggleSheet()" title="Seleccionadas">☑</button>
+                <button class="header-btn" onclick="logout()" title="Salir">↪</button>
+            </div>
+        </header>
+
+        <div class="stats" id="stats">
+            <div class="stat-p"><span style="color:var(--accent-orange)">⚡</span> <span id="statPow">0 kW</span></div>
+            <div class="stat-p"><span style="color:var(--accent-cyan)">↗</span> <span id="statDist">0 km</span></div>
+        </div>
+
+        <div class="map-wrap"><div id="map"></div></div>
+
+        <div class="fabs">
+            <button class="fab fab-s" id="fabLoc" onclick="locateUser()">📍</button>
+            <button class="fab fab-p" id="fabRoute" onclick="openRouteModal()">🗺</button>
+        </div>
+
+        <!-- Bottom Sheet -->
+        <div class="sheet" id="sheet">
+            <div class="sheet-handle" onclick="toggleSheet()"></div>
+            <div class="sheet-h">
+                <div class="sheet-title">📍 Subestaciones</div>
+                <div class="sheet-count" id="sheetC">0</div>
+            </div>
+            <div class="search-wrap">
+                <div class="search-box" id="searchBox">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" class="search-input" id="searchIn" placeholder="Buscar código, nombre, coords..." oninput="onSearch(this.value)">
+                    <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+                </div>
+            </div>
+            <div class="filters" id="filters"></div>
+            <div class="sed-list" id="sedList"></div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="act-bar" id="actBar">
+            <div class="act-bar-in">
+                <div class="act-bar-info">
+                    <div class="act-bar-c" id="actC">0 seleccionadas</div>
+                    <div class="act-bar-l">Listas para generar ruta</div>
+                </div>
+                <div class="act-bar-btns">
+                    <button class="act-btn act-btn-s" onclick="clearSelection()">🗑</button>
+                    <button class="act-btn act-btn-p" onclick="generateRoute()">
+                        <span>🗺</span><span>Ver ruta</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Route Modal -->
+        <div class="modal-o" id="routeModal">
+            <div class="modal-c">
+                <div class="modal-h">
+                    <div class="modal-t">🗺️ Ruta Optimizada</div>
+                    <button class="modal-x" onclick="closeRouteModal()">✕</button>
+                </div>
+                <div class="modal-b" id="routeList"></div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div class="toast-w" id="toastW">
+            <div class="toast">
+                <div class="toast-i" id="toastI">✓</div>
+                <div class="toast-m" id="toastM">Mensaje</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+
+        // ==================== CONFIG ====================
+        // ⚠️ REEMPLAZA ESTA URL con tu URL de Apps Script desplegado
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyx4eRR3PJR_I993cpNF-rjjvpZLLWQboCU7oHZJ4j5l7z3h5bZZNVPlngPuCSJNzvmwg/exec';
+
+        // Colores por sistema (coinciden con el backend)
+        const TYPE_COLORS = {
+            "Lima Norte": "#FF6B6B", "Huaral-Chancay": "#4ECDC4", "Huacho": "#45B7D1",
+            "Supe-Barranca": "#96CEB4", "Sayán-Humaya": "#FFEAA7", "Chillón": "#DDA0DD",
+            "Pativilca": "#98D8C8", "Valle Caral": "#F7DC6F", "Canta": "#BB8FCE",
+            "Churín": "#85C1E9", "Hoyos-Acos": "#F8C471", "Ravira-Pacaraos": "#82E0AA",
+            "Yaso": "#F1948A"
+        };
+
+        // ==================== STATE ====================
+        const state = {
+            token: localStorage.getItem('sed_token') || null,
+            empresa: localStorage.getItem('sed_empresa') || null,
+            deviceId: localStorage.getItem('sed_device') || generateDeviceId(),
+            sistemas: [],
+            currentSistema: '',
+            seds: [],
+            filteredSeds: [],
+            selectedSeds: new Set(),
+            activeFilters: new Set(),
+            searchQuery: '',
+            userLocation: null,
+            map: null,
+            markers: new Map(),
+            userMarker: null,
+            isSheetOpen: false,
+            routeOrder: []
+        };
+
+        function generateDeviceId() {
+            const id = 'dev-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            localStorage.setItem('sed_device', id);
+            return id;
+        }
+
+        // ==================== API CLIENT ====================
+        async function apiCall(action, payload = {}) {
+            const body = { action, token: state.token, deviceId: state.deviceId, ...payload };
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(body)
+                });
+                return await res.json();
+            } catch (err) {
+                console.error('API Error:', err);
+                return { ok: false, error: 'Error de conexión. Verifica tu internet.' };
+            }
+        }
+
+        // ==================== AUTH ====================
+        async function doLogin() {
+            const key = document.getElementById('licenseKey').value.trim();
+            const btn = document.getElementById('loginBtn');
+            const btnText = document.getElementById('loginBtnText');
+            const error = document.getElementById('loginError');
+
+            if (!key) { showLoginError('Ingresa una clave de licencia'); return; }
+
+            btn.disabled = true;
+            btnText.textContent = 'Validando...';
+            error.classList.remove('show');
+
+            const res = await apiCall('login', { licenseKey: key });
+
+            if (res.ok) {
+                state.token = res.token;
+                state.empresa = res.empresa;
+                localStorage.setItem('sed_token', res.token);
+                localStorage.setItem('sed_empresa', res.empresa);
+                showApp();
+            } else {
+                showLoginError(res.error || 'Error al validar licencia');
+                btn.disabled = false;
+                btnText.textContent = 'Ingresar';
+            }
+        }
+
+        function showLoginError(msg) {
+            const el = document.getElementById('loginError');
+            el.textContent = msg;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 4000);
+        }
+
+        function logout() {
+            state.token = null;
+            state.empresa = null;
+            localStorage.removeItem('sed_token');
+            localStorage.removeItem('sed_empresa');
+            location.reload();
+        }
+
+        // ==================== APP INIT ====================
+        async function showApp() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('loadScreen').classList.remove('hidden');
+            document.getElementById('app').style.display = '';
+
+            document.getElementById('headerUser').textContent = state.empresa;
+            document.getElementById('headerUser').style.display = '';
+
+            // Load sistemas
+            const res = await apiCall('listSistemas');
+            if (res.ok) {
+                state.sistemas = res.sistemas.map(s => s.n);
+                state.currentSistema = state.sistemas[0] || '';
+                document.getElementById('headerSub').textContent = res.total.toLocaleString() + ' SEDs disponibles';
+            }
+
+            initMap();
+            renderFilters();
+            await loadSeds();
+
+            document.getElementById('loadScreen').classList.add('hidden');
+            showToast('¡Bienvenido ' + state.empresa + '!', '👋');
+        }
+
+        async function loadSeds() {
+            setLoadText('Cargando SEDs...', 'Sistema: ' + state.currentSistema);
+            const res = await apiCall('search', { sistema: state.currentSistema, query: '' });
+            if (res.ok) {
+                state.seds = res.items.map(item => ({
+                    id: item.c,
+                    codigo: item.c,
+                    nombre: item.e || item.c,
+                    tipo: item.n,
+                    latitud: item.lat,
+                    longitud: item.lon,
+                    potencia_kw: item.p || 0,
+                    color: TYPE_COLORS[item.n] || '#8b5cf6',
+                    direccion: item.e || ''
+                }));
+                state.filteredSeds = [...state.seds];
+                renderSEDList();
+                renderMarkers();
+            }
+        }
+
+        function setLoadText(text, sub) {
+            document.getElementById('loadText').textContent = text;
+            document.getElementById('loadSub').textContent = sub;
+        }
+
+        // ==================== MAP ====================
+        function initMap() {
+            state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-11.2, -77.0], 9);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(state.map);
+            L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+        }
+
+        function createMarker(sed, isSelected) {
+            const html = `<div class="m-wrap ${isSelected ? 'sel' : ''}"><div class="m-pulse" style="background:${sed.color}"></div><div class="m-pin" style="background:${sed.color}"><div class="m-icon">⚡</div></div></div>`;
+            const icon = L.divIcon({ html, className: 'custom-div-icon', iconSize: [36, 36], iconAnchor: [18, 36] });
+            const marker = L.marker([sed.latitud, sed.longitud], { icon });
+
+            const popup = `
+                <div class="popup-h">
+                    <div class="popup-badge" style="background:${sed.color}20;color:${sed.color}">⚡ ${sed.tipo}</div>
+                    <div class="popup-title">${sed.nombre}</div>
+                    <div class="popup-code">${sed.codigo}</div>
+                </div>
+                <div class="popup-body">
+                    <div class="popup-row"><div class="popup-row-icon">📍</div><div><div style="font-weight:600">Ubicación</div><div style="color:var(--text-muted);font-size:11px">${sed.direccion || 'Sin dirección'}</div></div></div>
+                    <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-orange)">⚡</div><div><div style="font-weight:600">Potencia</div><div style="color:var(--text-muted);font-size:11px">${sed.potencia_kw} kW</div></div></div>
+                    <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-cyan)">↗</div><div><div style="font-weight:600">Coordenadas</div><div style="color:var(--text-muted);font-size:11px">${sed.latitud.toFixed(5)}, ${sed.longitud.toFixed(5)}</div></div></div>
+                </div>
+                <div class="popup-actions">
+                    <button class="popup-btn popup-btn-s" onclick="toggleFromPopup('${sed.id}')">${state.selectedSeds.has(sed.id) ? '✓ Seleccionada' : '☐ Seleccionar'}</button>
+                    <button class="popup-btn popup-btn-p" onclick="openMaps('${sed.id}')">🗺 Maps</button>
+                </div>`;
+            marker.bindPopup(popup, { closeButton: false, offset: [0, -10] });
+            marker.on('click', () => marker.openPopup());
+            return marker;
+        }
+
+        function renderMarkers() {
+            state.markers.forEach(m => state.map.removeLayer(m));
+            state.markers.clear();
+            const toShow = state.filteredSeds.slice(0, 400);
+            toShow.forEach(sed => {
+                const m = createMarker(sed, state.selectedSeds.has(sed.id));
+                m.addTo(state.map);
+                state.markers.set(sed.id, m);
+            });
+        }
+
+        function updateMarker(sedId) {
+            const m = state.markers.get(sedId);
+            if (!m) return;
+            const sed = state.seds.find(s => s.id === sedId);
+            const sel = state.selectedSeds.has(sedId);
+            const html = `<div class="m-wrap ${sel ? 'sel' : ''}"><div class="m-pulse" style="background:${sed.color}"></div><div class="m-pin" style="background:${sed.color}"><div class="m-icon">⚡</div></div></div>`;
+            m.setIcon(L.divIcon({ html, className: 'custom-div-icon', iconSize: [36, 36], iconAnchor: [18, 36] }));
+        }
+
+        function addUserMarker() {
+            if (state.userMarker) state.map.removeLayer(state.userMarker);
+            const icon = L.divIcon({
+                html: '<div class="u-wrap"><div class="u-ring"></div><div class="u-dot"></div></div>',
+                className: 'user-div-icon', iconSize: [22, 22], iconAnchor: [11, 11]
+            });
+            state.userMarker = L.marker([state.userLocation.lat, state.userLocation.lng], { icon }).addTo(state.map);
+            state.map.setView([state.userLocation.lat, state.userLocation.lng], 12);
+        }
+
+        // ==================== UI ====================
+        function renderFilters() {
+            const container = document.getElementById('filters');
+            container.innerHTML = state.sistemas.map(sys => `
+                <button class="chip ${state.currentSistema === sys ? 'on' : ''}" onclick="changeSistema('${sys}')">
+                    <span class="chip-dot" style="background:${TYPE_COLORS[sys] || '#8b5cf6'}"></span>${sys}
+                </button>
+            `).join('');
+        }
+
+        async function changeSistema(sys) {
+            state.currentSistema = sys;
+            state.selectedSeds.clear();
+            updateSelectionUI();
+            renderFilters();
+            await loadSeds();
+            showToast('Sistema: ' + sys, '📍');
+        }
+
+        function renderSEDList() {
+            const list = document.getElementById('sedList');
+            if (state.filteredSeds.length === 0) {
+                list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🔍</div><h3>No se encontraron SEDs</h3><p>Intenta con otros términos</p></div>';
+                return;
+            }
+            const toRender = state.filteredSeds.slice(0, 80);
+            list.innerHTML = toRender.map((sed, i) => {
+                const sel = state.selectedSeds.has(sed.id);
+                const dist = state.userLocation ? haversine(state.userLocation.lat, state.userLocation.lng, sed.latitud, sed.longitud) : null;
+                return `
+                    <div class="sed-card ${sel ? 'sel' : ''}" style="animation-delay:${i * 0.015}s;--card-c:${sed.color}" onclick="toggleSED('${sed.id}')">
+                        <div class="sed-check">✓</div>
+                        <div class="sed-info">
+                            <div class="sed-name">${sed.nombre}</div>
+                            <div class="sed-meta">
+                                <span class="sed-tag" style="background:${sed.color}20;color:${sed.color}">${sed.tipo}</span>
+                                <span>${sed.codigo}</span>
+                            </div>
+                            ${dist !== null ? `<div class="sed-dist">↗ ${fmtDist(dist)}</div>` : ''}
+                            <div class="sed-pow">⚡ ${sed.potencia_kw} kW</div>
+                        </div>
+                        <div class="sed-acts">
+                            <button class="sed-act" onclick="event.stopPropagation();flyTo('${sed.id}')">🎯</button>
+                            <button class="sed-act" onclick="event.stopPropagation();openMaps('${sed.id}')">🗺</button>
+                        </div>
+                    </div>`;
+            }).join('');
+            document.getElementById('sheetC').textContent = state.filteredSeds.length.toLocaleString();
+        }
+
+        function onSearch(q) {
+            state.searchQuery = q;
+            document.getElementById('searchBox').classList.toggle('has-val', q.length > 0);
+            applyFilters();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchIn').value = '';
+            state.searchQuery = '';
+            document.getElementById('searchBox').classList.remove('has-val');
+            applyFilters();
+        }
+
+        function applyFilters() {
+            let result = state.seds;
+            if (state.searchQuery) {
+                const q = state.searchQuery.toLowerCase();
+                result = result.filter(s => s.nombre.toLowerCase().includes(q) || s.codigo.toLowerCase().includes(q));
+            }
+            state.filteredSeds = result;
+            renderSEDList();
+            renderMarkers();
+        }
+
+        function toggleSED(id) {
+            if (state.selectedSeds.has(id)) state.selectedSeds.delete(id);
+            else state.selectedSeds.add(id);
+            renderSEDList();
+            updateMarker(id);
+            updateSelectionUI();
+        }
+
+        function toggleFromPopup(id) {
+            toggleSED(id);
+            const m = state.markers.get(id);
+            if (m) { m.closePopup(); setTimeout(() => m.openPopup(), 100); }
+        }
+
+        function flyTo(id) {
+            const sed = state.seds.find(s => s.id === id);
+            if (sed) {
+                state.map.flyTo([sed.latitud, sed.longitud], 16, { duration: 1.2 });
+                const m = state.markers.get(id);
+                if (m) setTimeout(() => m.openPopup(), 1300);
+            }
+        }
+
+        function openMaps(id) {
+            const sed = state.seds.find(s => s.id === id);
+            if (sed) window.open(`https://www.google.com/maps/dir/?api=1&destination=${sed.latitud},${sed.longitud}`, '_blank');
+        }
+
+        function clearSelection() {
+            state.selectedSeds.clear();
+            renderSEDList();
+            state.markers.forEach((m, id) => updateMarker(id));
+            updateSelectionUI();
+            showToast('Selección limpiada', '🗑');
+        }
+
+        function updateSelectionUI() {
+            const count = state.selectedSeds.size;
+            const btn = document.getElementById('btnSel');
+            const bar = document.getElementById('actBar');
+            const actC = document.getElementById('actC');
+            const stats = document.getElementById('stats');
+            const statPow = document.getElementById('statPow');
+            const statDist = document.getElementById('statDist');
+
+            btn.setAttribute('data-count', count);
+            btn.classList.toggle('has-badge', count > 0);
+
+            if (count > 0) {
+                bar.classList.add('vis');
+                actC.textContent = count + ' seleccionada' + (count !== 1 ? 's' : '');
+                const selected = state.seds.filter(s => state.selectedSeds.has(s.id));
+                const power = selected.reduce((sum, s) => sum + s.potencia_kw, 0);
+                statPow.textContent = power.toLocaleString() + ' kW';
+                let dist = 0, prev = state.userLocation;
+                selected.forEach(s => { if (prev) { dist += haversine(prev.lat, prev.lng, s.latitud, s.longitud); prev = { lat: s.latitud, lng: s.longitud }; } });
+                statDist.textContent = fmtDist(dist);
+                stats.classList.add('vis');
+            } else {
+                bar.classList.remove('vis');
+                stats.classList.remove('vis');
+            }
+        }
+
+        // ==================== ROUTE ====================
+        async function generateRoute() {
+            const codes = Array.from(state.selectedSeds);
+            if (codes.length === 0) { showToast('Selecciona al menos una SED', '⚠️'); return; }
+            if (!state.userLocation) { showToast('Activa tu GPS primero', '📍'); return; }
+
+            setLoadText('Calculando ruta óptima...', 'Ordenando ' + codes.length + ' paradas');
+            document.getElementById('loadScreen').classList.remove('hidden');
+
+            const res = await apiCall('report', {
+                codigos: codes,
+                origin: { lat: state.userLocation.lat, lon: state.userLocation.lng },
+                optimize: true
+            });
+
+            document.getElementById('loadScreen').classList.add('hidden');
+
+            if (res.ok) {
+                state.routeOrder = res.orden;
+                renderRouteModal(res.orden, res.totalKm);
+                document.getElementById('routeModal').classList.add('on');
+                showToast('Ruta calculada: ' + fmtDist(res.totalKm), '✓');
+            } else {
+                showToast(res.error || 'Error al calcular ruta', '⚠️');
+            }
+        }
+
+        function renderRouteModal(orden, totalKm) {
+            const list = document.getElementById('routeList');
+            let prev = state.userLocation;
+            list.innerHTML = orden.map((r, i) => {
+                const d = prev ? haversine(prev.lat, prev.lon, r.lat, r.lon) : 0;
+                prev = { lat: r.lat, lon: r.lon };
+                return `
+                    <div class="r-card" style="animation-delay:${i * 0.05}s">
+                        <div class="r-num">${i + 1}</div>
+                        <div class="r-info">
+                            <div class="r-name">${r.e || r.c}</div>
+                            <div class="r-dist">↗ ${fmtDist(d)} desde ${i === 0 ? 'tu ubicación' : 'parada anterior'}</div>
+                        </div>
+                        <button class="sed-act" onclick="openMaps('${r.c}')">🗺</button>
+                    </div>`;
+            }).join('') + `
+                <div class="r-total">
+                    <div class="r-total-v">${fmtDist(totalKm)}</div>
+                    <div class="r-total-l">Distancia total estimada</div>
+                </div>
+                <button class="act-btn act-btn-p" style="width:100%;margin-top:12px;padding:14px;justify-content:center" onclick="openFullRoute()">
+                    <span>🗺</span><span>Abrir ruta completa en Google Maps</span>
+                </button>`;
+        }
+
+        function openRouteModal() {
+            if (state.selectedSeds.size === 0) { showToast('Selecciona SEDs primero', '⚠️'); return; }
+            generateRoute();
+        }
+
+        function closeRouteModal() {
+            document.getElementById('routeModal').classList.remove('on');
+        }
+
+        function openFullRoute() {
+            if (!state.routeOrder.length) return;
+            const origin = state.userLocation ? `${state.userLocation.lat},${state.userLocation.lng}` : '';
+            const dests = state.routeOrder.map(r => `${r.lat},${r.lon}`);
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dests[dests.length - 1]}&waypoints=${dests.slice(0, -1).join('|')}`;
+            window.open(url, '_blank');
+        }
+
+        // ==================== GPS ====================
+        function locateUser() {
+            if (!navigator.geolocation) { showToast('GPS no soportado', '⚠️'); return; }
+            showToast('Detectando ubicación...', '📍');
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    addUserMarker();
+                    renderSEDList();
+                    showToast('Ubicación detectada', '✓');
+                },
+                err => { showToast('Error GPS: ' + err.message, '⚠️'); },
+                { enableHighAccuracy: true, timeout: 15000 }
+            );
+        }
+
+        // ==================== UTILS ====================
+        function haversine(lat1, lon1, lat2, lon2) {
+            const R = 6371, PI = Math.PI;
+            const dLat = (lat2 - lat1) * PI / 180, dLon = (lon2 - lon1) * PI / 180;
+            const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * PI / 180) * Math.cos(lat2 * PI / 180) * Math.sin(dLon / 2) ** 2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        function fmtDist(km) {
+            if (km < 1) return Math.round(km * 1000) + ' m';
+            return km.toFixed(1) + ' km';
+        }
+
+        function showToast(msg, icon) {
+            const w = document.getElementById('toastW');
+            document.getElementById('toastI').textContent = icon || '✓';
+            document.getElementById('toastM').textContent = msg;
+            w.classList.add('show');
+            setTimeout(() => w.classList.remove('show'), 3000);
+        }
+
+        function toggleSheet() {
+            state.isSheetOpen = !state.isSheetOpen;
+            document.getElementById('sheet').classList.toggle('open', state.isSheetOpen);
+        }
+
+        // Touch handling for sheet
+        let sheetStartY, sheetStartTransform;
+        const sheet = document.getElementById('sheet');
+        const handle = sheet.querySelector('.sheet-handle');
+
+        handle.addEventListener('touchstart', e => {
+            sheetStartY = e.touches[0].clientY;
+            sheetStartTransform = state.isSheetOpen ? 0 : sheet.offsetHeight - 76;
+        });
+
+        handle.addEventListener('touchmove', e => {
+            const dy = e.touches[0].clientY - sheetStartY;
+            const ny = Math.max(0, sheetStartTransform + dy);
+            sheet.style.transform = `translateY(${ny}px)`;
+            sheet.style.transition = 'none';
+        });
+
+        handle.addEventListener('touchend', e => {
+            sheet.style.transition = '';
+            sheet.style.transform = '';
+            const dy = e.changedTouches[0].clientY - sheetStartY;
+            if (Math.abs(dy) > 40) {
+                state.isSheetOpen = dy < 0;
+                sheet.classList.toggle('open', state.isSheetOpen);
+            }
+        });
+
+        // Offline detection
+        window.addEventListener('online', () => document.getElementById('offlineBanner').classList.remove('show'));
+        window.addEventListener('offline', () => document.getElementById('offlineBanner').classList.add('show'));
+
+        // Init
+        document.addEventListener('DOMContentLoaded', () => {
+            if (state.token && state.empresa) {
+                showApp();
+            }
+            document.getElementById('licenseKey').addEventListener('keypress', e => {
+                if (e.key === 'Enter') doLogin();
+            });
+        });
+    </script>
+</body>
+</html>
