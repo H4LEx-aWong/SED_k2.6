@@ -839,7 +839,7 @@ async function loadDataset() {
     const sistemasSet = new Set();
     state.dataset.forEach(s => sistemasSet.add(s.tipo));
     state.sistemas = Array.from(sistemasSet).sort();
-    state.currentSistema = state.sistemas[0] || '';
+    state.currentSistema = state.sistemas.includes('Lima Norte') ? 'Lima Norte' : (state.sistemas[0] || '');
 
     applyFilters();
     renderFilters();
