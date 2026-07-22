@@ -1298,7 +1298,11 @@ async function generateRoute() {
 
 function renderRouteModal(orden, totalKm) {
   const list = document.getElementById('routeList');
-  let prev = state.userLocation;
+  // Normalizar userLocation: GPS devuelve {lat, lng}, backend devuelve {lat, lon}
+  let prev = state.userLocation ? { 
+    lat: state.userLocation.lat, 
+    lon: state.userLocation.lng || state.userLocation.lon 
+  } : null;
   list.innerHTML = orden.map((r, i) => {
     const d = prev ? haversine(prev.lat, prev.lon, r.lat, r.lon) : 0;
     prev = { lat: r.lat, lon: r.lon };
