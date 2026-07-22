@@ -1474,16 +1474,125 @@ document.addEventListener('DOMContentLoaded', () => {
     font-size:9px; color:var(--accent-orange); font-weight:600;
     margin-left:4px; vertical-align:middle;
   }
+
+  /* Contact Modal */
+  .contact-modal-o{
+    position:fixed; inset:0; z-index:6000;
+    display:flex; align-items:flex-end; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition:opacity 0.4s ease;
+    background:rgba(0,0,0,0.6);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  }
+  .contact-modal-o.on{opacity:1; pointer-events:all;}
+  .contact-modal-c{
+    width:100%; max-width:420px;
+    border-radius:var(--radius) var(--radius) 0 0;
+    transform:translateY(100%);
+    transition:transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    background:var(--glass-bg);
+    backdrop-filter:blur(40px) saturate(180%);
+    -webkit-backdrop-filter:blur(40px) saturate(180%);
+    border:1px solid var(--glass-border);
+    border-bottom:none;
+    box-shadow:var(--glass-shadow-lg);
+    padding:0 0 calc(env(safe-area-inset-bottom,0px) + 20px) 0;
+    position:relative;
+  }
+  .contact-modal-o.on .contact-modal-c{transform:translateY(0);}
+  .contact-modal-handle{
+    width:40px; height:4px; background:var(--text-muted);
+    border-radius:2px; margin:12px auto; opacity:0.4; cursor:pointer;
+  }
+  .contact-avatar-wrap{
+    text-align:center; padding:8px 0 16px;
+  }
+  .contact-avatar{
+    width:72px; height:72px; border-radius:50%;
+    background:linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:36px; box-shadow:0 8px 30px rgba(168,85,247,0.3);
+    border:3px solid rgba(255,255,255,0.1);
+  }
+  .contact-name{
+    font-size:20px; font-weight:700; color:var(--text-primary);
+    text-align:center; padding:0 24px 4px;
+  }
+  .contact-msg{
+    font-size:14px; color:var(--text-secondary); line-height:1.7;
+    text-align:center; padding:0 28px 20px;
+  }
+  .contact-msg strong{
+    color:var(--accent-cyan); font-weight:600;
+  }
+  .contact-actions{
+    display:flex; gap:10px; padding:0 24px;
+  }
+  .contact-btn{
+    flex:1; padding:14px; border-radius:var(--radius-xs); border:none;
+    font-size:13px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:all 0.2s ease; -webkit-appearance:none;
+  }
+  .contact-btn-p{
+    background:linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+    color:white; box-shadow:0 4px 20px rgba(168,85,247,0.3);
+  }
+  .contact-btn-p:hover{transform:translateY(-2px); box-shadow:0 8px 30px rgba(168,85,247,0.4);}
+  .contact-btn-s{
+    background:var(--glass-bg-light); color:var(--text-secondary);
+    border:1px solid var(--glass-border); backdrop-filter:blur(10px);
+  }
+  .contact-btn-s:hover{background:var(--glass-bg-hover); color:var(--text-primary);}
+  .contact-close{
+    position:absolute; top:16px; right:16px;
+    width:32px; height:32px; border-radius:50%;
+    background:var(--glass-bg-light); border:1px solid var(--glass-border);
+    color:var(--text-secondary); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:14px; backdrop-filter:blur(10px);
+    transition:all 0.2s ease; -webkit-appearance:none;
+  }
+  .contact-close:hover{background:var(--glass-bg-hover); color:var(--text-primary);}
 </style>
 <div class="app-footer" id="appFooter">
-  <a onclick="showFooterMsg()">
+  <a onclick="showContactModal()">
     desarrollado por <span class="footer-brand">aWong.la</span>
     <span class="footer-badge">versión de prueba</span>
   </a>
 </div>
+
+<!-- Contact Modal -->
+<div class="contact-modal-o" id="contactModal" onclick="if(event.target===this)closeContactModal()">
+  <div class="contact-modal-c">
+    <div class="contact-modal-handle" onclick="closeContactModal()"></div>
+    <button class="contact-close" onclick="closeContactModal()">✕</button>
+    <div class="contact-avatar-wrap">
+      <div class="contact-avatar">🦎</div>
+    </div>
+    <div class="contact-name" id="contactName">Usuario</div>
+    <div class="contact-msg">
+      ¡Hola sabandija! 🦎<br><br>
+      En estos momentos estamos fuera y, por tanto, no podemos responder a tu mensaje.<br><br>
+      Por favor, déjanos un correo:<br>
+      <strong>l.a.aguilar.wong@gmail.com</strong>
+    </div>
+    <div class="contact-actions">
+      <button class="contact-btn contact-btn-s" onclick="closeContactModal()">Cerrar</button>
+      <button class="contact-btn contact-btn-p" onclick="window.open('mailto:l.a.aguilar.wong@gmail.com','_blank')">
+        <span>✉</span><span>Enviar correo</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
-function showFooterMsg(){
-  showToast('hola sabandija', '🦎');
+function showContactModal(){
+  const nameEl = document.getElementById('contactName');
+  nameEl.textContent = state.empresa || 'Usuario';
+  document.getElementById('contactModal').classList.add('on');
+}
+function closeContactModal(){
+  document.getElementById('contactModal').classList.remove('on');
 }
 </script>
 
