@@ -1003,23 +1003,28 @@ function createMarker(sed, isSelected) {
   const icon = L.divIcon({ html, className: 'custom-div-icon', iconSize: [36, 36], iconAnchor: [18, 36] });
   const marker = L.marker([sed.latitud, sed.longitud], { icon });
 
-  const popup = `
-    <div class="popup-h">
-      <div class="popup-badge" style="background:${sed.color}20;color:${sed.color}">⚡ ${sed.tipo}</div>
-      <div class="popup-title">${sed.nombre}</div>
-      <div class="popup-code">${sed.codigo}</div>
-    </div>
-    <div class="popup-body">
-      <div class="popup-row"><div class="popup-row-icon">📍</div><div><div style="font-weight:600">Ubicación</div><div style="color:var(--text-muted);font-size:11px">${sed.direccion || 'Sin dirección'}</div></div></div>
-      <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-orange)">⚡</div><div><div style="font-weight:600">Potencia</div><div style="color:var(--text-muted);font-size:11px">${sed.potencia_kw} kW</div></div></div>
-      <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-cyan)">↗</div><div><div style="font-weight:600">Coordenadas</div><div style="color:var(--text-muted);font-size:11px">${sed.latitud.toFixed(5)}, ${sed.longitud.toFixed(5)}</div></div></div>
-    </div>
-    <div class="popup-actions">
-      <button class="popup-btn popup-btn-s" onclick="toggleFromPopup('${sed.id}')">${state.selectedSeds.has(sed.id) ? '✓ Seleccionada' : '☐ Seleccionar'}</button>
-      <button class="popup-btn popup-btn-p" onclick="openMaps('${sed.id}')">🗺 Maps</button>
-    </div>`;
+  // Generar popup dinámicamente cada vez que se abre (para reflejar estado de selección)
+  marker.on('popupopen', function() {
+    const isSel = state.selectedSeds.has(sed.id);
+    const popupContent = `
+      <div class="popup-h">
+        <div class="popup-badge" style="background:${sed.color}20;color:${sed.color}">⚡ ${sed.tipo}</div>
+        <div class="popup-title">${sed.nombre}</div>
+        <div class="popup-code">${sed.codigo}</div>
+      </div>
+      <div class="popup-body">
+        <div class="popup-row"><div class="popup-row-icon">📍</div><div><div style="font-weight:600">Ubicación</div><div style="color:var(--text-muted);font-size:11px">${sed.direccion || 'Sin dirección'}</div></div></div>
+        <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-orange)">⚡</div><div><div style="font-weight:600">Potencia</div><div style="color:var(--text-muted);font-size:11px">${sed.potencia_kw} kW</div></div></div>
+        <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-cyan)">↗</div><div><div style="font-weight:600">Coordenadas</div><div style="color:var(--text-muted);font-size:11px">${sed.latitud.toFixed(5)}, ${sed.longitud.toFixed(5)}</div></div></div>
+      </div>
+      <div class="popup-actions">
+        <button class="popup-btn ${isSel ? 'popup-btn-p' : 'popup-btn-s'}" onclick="toggleFromPopup('${sed.id}')">${isSel ? '✓ Seleccionada' : '☐ Seleccionar'}</button>
+        <button class="popup-btn popup-btn-p" onclick="openMaps('${sed.id}')">🗺 Maps</button>
+      </div>`;
+    marker.setPopupContent(popupContent);
+  });
 
-  marker.bindPopup(popup, { closeButton: false, offset: [0, -10] });
+  marker.bindPopup('', { closeButton: false, offset: [0, -10] });
   marker.on('click', () => marker.openPopup());
   return marker;
 }
