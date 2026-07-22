@@ -565,6 +565,7 @@
   }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -710,8 +711,8 @@
 
 // ==================== CONFIG ====================
 // ⚠️ REEMPLAZA ESTAS URLS con las tuyas
-const API_URL = 'https://script.google.com/macros/s/AKfycbzOsE1FAsI5eLGA1fJh_BLYMOJ3KBQ-ijyEkSvvlRVKxLetRqSgG492jes-VtEr7vlevw/exec';
-const DATASET_URL = '1Vfobwz7cr0trmKRkwe_hFe4hmVlRNiwL';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx1XvvZj16lxssFEnsRefbeQUeOqUZU91kuGcOW2CdQvI3stxJEY8Ce-OGcM8Ca_ObWmQ/exec';
+const DATASET_URL = 'https://drive.google.com/file/d/1Vfobwz7cr0trmKRkwe_hFe4hmVlRNiwL/view?usp=sharing';
 
 const TYPE_COLORS = {
   "Lima Norte": "#FF6B6B", "Huaral-Chancay": "#4ECDC4", "Huacho": "#45B7D1",
@@ -1269,5 +1270,52 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 </script>
+
+
+<!-- ========== FOOTER ========== -->
+<style>
+  .app-footer{
+    position:fixed; bottom:0; left:0; right:0; z-index:500;
+    padding:calc(env(safe-area-inset-bottom,0px) + 6px) 16px 8px;
+    text-align:center;
+    background:linear-gradient(180deg, transparent 0%, rgba(10,10,26,0.85) 40%);
+    pointer-events:none;
+  }
+  .app-footer a{
+    pointer-events:auto;
+    font-size:11px; color:var(--text-muted);
+    text-decoration:none; cursor:pointer;
+    transition:all 0.3s ease; display:inline-block;
+    padding:4px 12px; border-radius:10px;
+  }
+  .app-footer a:hover{
+    color:var(--accent-cyan);
+    background:rgba(0,245,255,0.08);
+  }
+  .app-footer a:active{transform:scale(0.95);}
+  .footer-brand{
+    background:linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    font-weight:700;
+  }
+  .footer-badge{
+    display:inline-block; padding:1px 6px; border-radius:4px;
+    background:var(--glass-bg-light); border:1px solid var(--glass-border);
+    font-size:9px; color:var(--accent-orange); font-weight:600;
+    margin-left:4px; vertical-align:middle;
+  }
+</style>
+<div class="app-footer" id="appFooter">
+  <a onclick="showFooterMsg()">
+    desarrollado por <span class="footer-brand">aWong.la</span>
+    <span class="footer-badge">versión de prueba</span>
+  </a>
+</div>
+<script>
+function showFooterMsg(){
+  showToast('hola sabandija', '🦎');
+}
+</script>
+
 </body>
 </html>
