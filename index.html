@@ -710,9 +710,9 @@
 <script>
 
 // ==================== CONFIG ====================
-// ⚠️ REEMPLAZA ESTAS URLS con las tuyas
-const API_URL = 'https://script.google.com/macros/s/AKfycbx1XvvZj16lxssFEnsRefbeQUeOqUZU91kuGcOW2CdQvI3stxJEY8Ce-OGcM8Ca_ObWmQ/exec';
-const DATASET_URL = 'https://corsproxy.io/?https://drive.google.com/uc?export=download&id=1Vfobwz7cr0trmKRkwe_hFe4hmVlRNiwL';
+// ⚠️ REEMPLAZA ESTA URL con la de tu Google Apps Script desplegado
+const API_URL = 'https://script.google.com/macros/s/AKfycbxzzS88INHuat74r32FCoNRzngPIpibCLcxMv36TGTJkOK81xnpOBTvCkSxGixIWc7g/exec';
+// v3: El dataset se carga autenticado desde el backend (Google Apps Script)
 
 const TYPE_COLORS = {
   "Lima Norte": "#FF6B6B", "Huaral-Chancay": "#4ECDC4", "Huacho": "#45B7D1",
@@ -798,13 +798,18 @@ async function apiCall(action, payload = {}) {
   }
 }
 
-// ==================== LOAD DATASET FROM DRIVE JSON ====================
+// ==================== LOAD DATASET FROM BACKEND (v3) ====================
+// El backend descarga el JSON desde Google Drive y lo sirve autenticado
 async function loadDataset() {
-  setLoadText('Cargando dataset...', 'Descargando desde Google Drive');
+  setLoadText('Cargando dataset...', 'Solicitando al servidor');
   try {
-    const res = await fetch(DATASET_URL);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    const res = await apiCall('getDataset', {});
+
+    if (!res.ok) {
+      throw new Error(res.error || 'Error del servidor');
+    }
+
+    let data = res.dataset;
 
     // Normalize data - handle various JSON structures
     if (Array.isArray(data)) {
@@ -840,11 +845,11 @@ async function loadDataset() {
     renderFilters();
 
     document.getElementById('headerSub').textContent = state.dataset.length.toLocaleString() + ' SEDs cargadas';
-    showToast(state.dataset.length.toLocaleString() + ' SEDs cargadas desde Drive', '✓');
+    showToast(state.dataset.length.toLocaleString() + ' SEDs cargadas' + (res.source === 'cache' ? ' (cache)' : ''), '✓');
 
   } catch (err) {
     console.error('Dataset error:', err);
-    showToast('Error cargando dataset. Intenta recargar.', '⚠️');
+    showToast('Error cargando dataset: ' + err.message, '⚠️');
     document.getElementById('headerSub').textContent = 'Error cargando datos';
   }
 }
