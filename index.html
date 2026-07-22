@@ -367,6 +367,63 @@
   /* Filters */
   .filters{padding:0 20px 16px; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none;}
   .filters::-webkit-scrollbar{display:none;}
+
+  /* Custom Dropdown Select */
+  .sed-select-wrap{position:relative;padding:0 20px 16px;z-index:100;}
+  .sed-select-trigger{
+    display:flex;align-items:center;gap:10px;
+    padding:14px 16px;border-radius:14px;
+    background:var(--glass-bg-light);
+    backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border:1px solid var(--glass-border);
+    cursor:pointer;transition:all 0.3s ease;
+    color:var(--text-primary);font-size:14px;font-weight:600;
+    user-select:none;
+  }
+  .sed-select-trigger:hover{
+    background:var(--glass-bg-hover);
+    border-color:var(--glass-border-hover);
+  }
+  .sed-select-trigger.open{
+    border-color:rgba(0,245,255,0.4);
+    box-shadow:0 0 0 3px rgba(0,245,255,0.1),0 0 20px rgba(0,245,255,0.05);
+  }
+  .sed-select-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;box-shadow:0 0 8px currentColor;}
+  .sed-select-text{flex:1;}
+  .sed-select-arrow{font-size:10px;color:var(--text-muted);transition:transform 0.3s ease;margin-left:auto;}
+  .sed-select-trigger.open .sed-select-arrow{transform:rotate(180deg);}
+  .sed-select-dropdown{
+    position:absolute;top:calc(100% + 8px);left:20px;right:20px;
+    background:rgba(15,15,35,0.98);
+    backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);
+    border:1px solid var(--glass-border);border-radius:14px;
+    max-height:320px;overflow-y:auto;z-index:200;
+    opacity:0;transform:translateY(-10px) scale(0.95);
+    pointer-events:none;
+    transition:all 0.25s cubic-bezier(0.4,0,0.2,1);
+    box-shadow:var(--glass-shadow-lg);
+  }
+  .sed-select-dropdown.open{
+    opacity:1;transform:translateY(0) scale(1);pointer-events:all;
+  }
+  .sed-select-dropdown::-webkit-scrollbar{width:4px;}
+  .sed-select-dropdown::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.15);border-radius:4px;}
+  .sed-option{
+    display:flex;align-items:center;gap:10px;
+    padding:12px 16px;cursor:pointer;transition:all 0.2s ease;
+    color:var(--text-secondary);font-size:13px;font-weight:500;
+    border-bottom:1px solid rgba(255,255,255,0.04);
+  }
+  .sed-option:last-child{border-bottom:none;border-radius:0 0 14px 14px;}
+  .sed-option:first-child{border-radius:14px 14px 0 0;}
+  .sed-option:hover{background:var(--glass-bg-hover);color:var(--text-primary);}
+  .sed-option.selected{
+    background:linear-gradient(90deg,rgba(168,85,247,0.15),transparent);
+    color:var(--text-primary);
+  }
+  .sed-option-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .sed-option-check{margin-left:auto;font-size:12px;color:var(--accent-cyan);opacity:0;transition:opacity 0.2s;}
+  .sed-option.selected .sed-option-check{opacity:1;}
   .chip{
     flex-shrink:0; padding:8px 16px; border-radius:20px;
     font-size:12px; font-weight:500; cursor:pointer;
@@ -666,7 +723,14 @@
         <button class="search-clear" onclick="clearSearch()">✕</button>
       </div>
     </div>
-    <div class="filters" id="filters"></div>
+    <div class="sed-select-wrap" id="sedSelectWrap">
+    <div class="sed-select-trigger" id="sedSelectTrigger" onclick="toggleSedDropdown()">
+      <span class="sed-select-dot" id="sedSelectDot" style="background:#8b5cf6"></span>
+      <span class="sed-select-text" id="sedSelectText">Seleccionar sistema</span>
+      <span class="sed-select-arrow">▼</span>
+    </div>
+    <div class="sed-select-dropdown" id="sedSelectDropdown"></div>
+  </div>
     <div class="sed-list" id="sedList"></div>
   </div>
 
@@ -711,7 +775,7 @@
 
 // ==================== CONFIG ====================
 // ⚠️ REEMPLAZA ESTA URL con la de tu Google Apps Script desplegado
-const API_URL = 'https://script.google.com/macros/s/AKfycbwM8_VQOdH-BTCd1BMUooJP788qkbXgORhtuX7WqoK8hiUCOrdjVPBTwW1ntWHzH_It4g/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzAJx_iGIIsujqj9jHSAyrkLEWdSrWXJSxudCvl39y1sEIl_UKvsHncx3o3xRWwxhk0Tg/exec';
 // v3: El dataset se carga autenticado desde el backend (Google Apps Script)
 
 const TYPE_COLORS = {
@@ -831,7 +895,14 @@ async function loadDataset() {
       latitud: Number(item.latitud || item.lat || item.latitude || 0),
       longitud: Number(item.longitud || item.lon || item.lng || item.longitude || 0),
       potencia_kw: Number(item.potencia_kw || item.potencia || item.p || item.potInst || 0),
-      color: TYPE_COLORS[item.tipo || item.sistema || item.nom_sist || item.n] || '#8b5cf6',
+      color: (() => {
+        const sys = String(item.tipo || item.sistema || item.nom_sist || item.n || '').trim();
+        // Buscar coincidencia exacta primero
+        if (TYPE_COLORS[sys]) return TYPE_COLORS[sys];
+        // Buscar coincidencia sin importar mayúsculas/minúsculas
+        const key = Object.keys(TYPE_COLORS).find(k => k.toLowerCase() === sys.toLowerCase());
+        return key ? TYPE_COLORS[key] : '#8b5cf6';
+      })(),
       direccion: item.direccion || item.dirección || item.address || ''
     })).filter(s => s.latitud && s.longitud);
 
@@ -839,7 +910,7 @@ async function loadDataset() {
     const sistemasSet = new Set();
     state.dataset.forEach(s => sistemasSet.add(s.tipo));
     state.sistemas = Array.from(sistemasSet).sort();
-    state.currentSistema = state.sistemas.includes('Lima Norte') ? 'Lima Norte' : (state.sistemas[0] || '');
+    state.currentSistema = state.sistemas.includes('LIMA NORTE') ? 'LIMA NORTE' : (state.sistemas[0] || '');
 
     applyFilters();
     renderFilters();
@@ -985,22 +1056,83 @@ function addUserMarker() {
 
 // ==================== UI ====================
 function renderFilters() {
-  const container = document.getElementById('filters');
-  container.innerHTML = state.sistemas.map(sys => `
-    <button class="chip ${state.currentSistema === sys ? 'on' : ''}" onclick="changeSistema('${sys}')">
-      <span class="chip-dot" style="background:${TYPE_COLORS[sys] || '#8b5cf6'}"></span>${sys}
-    </button>
-  `).join('');
+  const dropdown = document.getElementById('sedSelectDropdown');
+  // Ordenar: 'Lima Norte' primero, luego el resto alfabéticamente
+  const sortedSistemas = [...state.sistemas].sort((a, b) => {
+    if (a === 'Lima Norte') return -1;
+    if (b === 'Lima Norte') return 1;
+    return a.localeCompare(b);
+  });
+
+  dropdown.innerHTML = sortedSistemas.map(sys => {
+    const color = TYPE_COLORS[sys] || '#8b5cf6';
+    const isSelected = state.currentSistema === sys;
+    return `
+      <div class="sed-option ${isSelected ? 'selected' : ''}" data-value="${escapeHtml(sys)}" onclick="selectSistema('${escapeHtml(sys)}')">
+        <span class="sed-option-dot" style="background:${color};box-shadow:0 0 6px ${color}"></span>
+        <span>${escapeHtml(sys.toUpperCase())}</span>
+        <span class="sed-option-check">✓</span>
+      </div>
+    `;
+  }).join('');
+
+  // Actualizar el trigger con el sistema seleccionado
+  updateSelectTrigger();
 }
 
-function changeSistema(sys) {
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function updateSelectTrigger() {
+  const triggerText = document.getElementById('sedSelectText');
+  const triggerDot = document.getElementById('sedSelectDot');
+  if (state.currentSistema) {
+    triggerText.textContent = state.currentSistema.toUpperCase();
+    triggerDot.style.background = TYPE_COLORS[state.currentSistema] || '#8b5cf6';
+    triggerDot.style.boxShadow = `0 0 8px ${TYPE_COLORS[state.currentSistema] || '#8b5cf6'}`;
+  } else {
+    triggerText.textContent = 'Seleccionar sistema';
+    triggerDot.style.background = '#8b5cf6';
+    triggerDot.style.boxShadow = 'none';
+  }
+}
+
+function toggleSedDropdown() {
+  const trigger = document.getElementById('sedSelectTrigger');
+  const dropdown = document.getElementById('sedSelectDropdown');
+  const isOpen = dropdown.classList.contains('open');
+
+  if (isOpen) {
+    dropdown.classList.remove('open');
+    trigger.classList.remove('open');
+  } else {
+    dropdown.classList.add('open');
+    trigger.classList.add('open');
+  }
+}
+
+function selectSistema(sys) {
   state.currentSistema = sys;
   state.selectedSeds.clear();
   updateSelectionUI();
-  renderFilters();
+
+  // Actualizar UI del dropdown
+  document.querySelectorAll('.sed-option').forEach(opt => {
+    opt.classList.toggle('selected', opt.dataset.value === sys);
+  });
+  updateSelectTrigger();
+
+  // Cerrar dropdown
+  document.getElementById('sedSelectDropdown').classList.remove('open');
+  document.getElementById('sedSelectTrigger').classList.remove('open');
+
   applyFilters();
   showToast('Sistema: ' + sys, '📍');
 }
+
 
 function renderSEDList() {
   const list = document.getElementById('sedList');
@@ -1130,11 +1262,24 @@ async function generateRoute() {
   if (codes.length === 0) { showToast('Selecciona al menos una SED', '⚠️'); return; }
   if (!state.userLocation) { showToast('Activa tu GPS primero', '📍'); return; }
 
-  setLoadText('Calculando ruta óptima...', 'Ordenando ' + codes.length + ' paradas');
+  // Construir array de SEDs con coordenadas para el backend
+  const seds = codes.map(id => {
+    const sed = state.dataset.find(s => s.id === id);
+    return {
+      c: sed.codigo,
+      e: sed.nombre,
+      n: sed.tipo,
+      lat: sed.latitud,
+      lon: sed.longitud,
+      p: sed.potencia_kw
+    };
+  });
+
+  setLoadText('Calculando ruta óptima...', 'Ordenando ' + seds.length + ' paradas');
   document.getElementById('loadScreen').classList.remove('hidden');
 
   const res = await apiCall('report', {
-    codigos: codes,
+    seds: seds,
     origin: { lat: state.userLocation.lat, lon: state.userLocation.lng },
     optimize: true
   });
@@ -1259,6 +1404,17 @@ handle.addEventListener('touchend', e => {
   if (Math.abs(dy) > 40) {
     state.isSheetOpen = dy < 0;
     sheet.classList.toggle('open', state.isSheetOpen);
+  }
+});
+
+// Cerrar dropdown al hacer click fuera
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('sedSelectWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const dropdown = document.getElementById('sedSelectDropdown');
+    const trigger = document.getElementById('sedSelectTrigger');
+    if (dropdown) dropdown.classList.remove('open');
+    if (trigger) trigger.classList.remove('open');
   }
 });
 
