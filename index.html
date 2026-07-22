@@ -515,6 +515,48 @@
   .offline-banner{position:fixed; top:0; left:0; right:0; z-index:5000; background:linear-gradient(90deg, var(--accent-orange), #f59e0b); color:white; text-align:center; padding:8px; font-size:12px; font-weight:600; transform:translateY(-100%); transition:transform 0.3s ease;}
   .offline-banner.show{transform:translateY(0);}
 
+  /* Contact Button */
+  .header-contact{
+    display:flex; align-items:center; gap:6px;
+    padding:6px 12px; border-radius:20px;
+    background:linear-gradient(135deg, rgba(168,85,247,0.15), rgba(0,245,255,0.1));
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    border:1px solid rgba(168,85,247,0.25);
+    color:var(--accent-cyan); font-size:11px; font-weight:600;
+    text-decoration:none; cursor:pointer;
+    transition:all 0.3s ease; position:relative; overflow:hidden;
+    box-shadow:0 2px 12px rgba(168,85,247,0.15);
+  }
+  .header-contact::before{
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg, rgba(168,85,247,0.3), rgba(0,245,255,0.2));
+    opacity:0; transition:opacity 0.3s ease; border-radius:inherit;
+  }
+  .header-contact:hover::before{opacity:1;}
+  .header-contact:hover{
+    transform:translateY(-2px); box-shadow:0 6px 20px rgba(168,85,247,0.3);
+    border-color:rgba(168,85,247,0.5);
+  }
+  .header-contact:active{transform:translateY(0) scale(0.95);}
+  .contact-icon{
+    font-size:13px; position:relative; z-index:1;
+    animation:contactPulse 3s ease-in-out infinite;
+  }
+  @keyframes contactPulse{
+    0%,100%{transform:scale(1);}
+    50%{transform:scale(1.2);}
+  }
+  .contact-text{
+    position:relative; z-index:1;
+    background:linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  /* Hide text on very small screens, show only icon */
+  @media(max-width:380px){
+    .header-contact{padding:6px 8px;}
+    .contact-text{display:none;}
+  }
+
   @media(min-width:768px){
     .sheet{max-width:480px; left:50%; transform:translateX(-50%) translateY(calc(100% - 80px));}
     .sheet.open{transform:translateX(-50%) translateY(0);}
@@ -581,6 +623,10 @@
     </div>
     <div class="header-actions">
       <div class="header-user" id="headerUser" style="display:none;"></div>
+      <a class="header-contact" href="mailto:luis.aguilar.wong@gmail.com" title="Contactar soporte">
+        <span class="contact-icon">✉</span>
+        <span class="contact-text">Contacto</span>
+      </a>
       <button class="header-btn" onclick="toggleSheet()" title="Lista">☰</button>
       <button class="header-btn" id="btnSel" data-count="0" onclick="toggleSheet()" title="Seleccionadas">☑</button>
       <button class="header-btn" onclick="logout()" title="Salir">↪</button>
