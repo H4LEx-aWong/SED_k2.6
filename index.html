@@ -778,7 +778,7 @@
 
 // ==================== CONFIG ====================
 // ⚠️ REEMPLAZA ESTA URL con la de tu Google Apps Script desplegado
-const API_URL = 'https://script.google.com/macros/s/AKfycbzAJx_iGIIsujqj9jHSAyrkLEWdSrWXJSxudCvl39y1sEIl_UKvsHncx3o3xRWwxhk0Tg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx1XvvZj16lxssFEnsRefbeQUeOqUZU91kuGcOW2CdQvI3stxJEY8Ce-OGcM8Ca_ObWmQ/exec';
 // v3: El dataset se carga autenticado desde el backend (Google Apps Script)
 
 const TYPE_COLORS = {
@@ -865,67 +865,91 @@ async function apiCall(action, payload = {}) {
   }
 }
 
-// ==================== LOAD DATASET FROM BACKEND (v3) ====================
-// El backend descarga el JSON desde Google Drive y lo sirve autenticado
+// ==================== LOAD DATASET (v3 con FALLBACK) ====================
+// Intenta backend primero, si falla usa Google Drive directo
+const DATASET_FALLBACK_URL = 'https://corsproxy.io/?https://drive.google.com/uc?export=download&id=1Vfobwz7cr0trmKRkwe_hFe4hmVlRNiwL';
+
 async function loadDataset() {
   setLoadText('Cargando dataset...', 'Solicitando al servidor');
+  console.log('[DIAG] loadDataset iniciado');
+  console.log('[DIAG] API_URL:', API_URL);
+  console.log('[DIAG] Token:', state.token ? 'Presente' : 'NO HAY TOKEN');
+  console.log('[DIAG] Empresa:', state.empresa);
+
+  // Intento 1: Backend (autenticado)
   try {
+    console.log('[DIAG] Intento 1: Backend...');
     const res = await apiCall('getDataset', {});
+    console.log('[DIAG] Respuesta backend:', res);
 
-    if (!res.ok) {
-      throw new Error(res.error || 'Error del servidor');
+    if (res.ok && res.dataset) {
+      await processDataset(res.dataset);
+      showToast(state.dataset.length.toLocaleString() + ' SEDs cargadas' + (res.source === 'cache' ? ' (cache)' : ''), '✓');
+      console.log('[DIAG] ✅ Dataset cargado desde BACKEND');
+      return;
     }
+    console.log('[DIAG] Backend respondió pero sin dataset, intentando fallback...');
+  } catch (backendErr) {
+    console.error('[DIAG] Backend falló:', backendErr.message);
+  }
 
-    let data = res.dataset;
-
-    // Normalize data - handle various JSON structures
-    if (Array.isArray(data)) {
-      state.dataset = data;
-    } else if (data.seds || data.data) {
-      state.dataset = data.seds || data.data;
-    } else {
-      // Try to find array in object
-      const arr = Object.values(data).find(v => Array.isArray(v));
-      state.dataset = arr || [];
-    }
-
-    // Normalize fields
-    state.dataset = state.dataset.map(item => ({
-      id: item.id || item.codigo || item.c || `SED-${Math.random().toString(36).slice(2,8)}`,
-      codigo: item.codigo || item.c || item.id || '',
-      nombre: item.nombre || item.etiqueta || item.e || item.name || item.codigo || '',
-      tipo: item.tipo || item.sistema || item.nom_sist || item.n || 'Sin sistema',
-      latitud: Number(item.latitud || item.lat || item.latitude || 0),
-      longitud: Number(item.longitud || item.lon || item.lng || item.longitude || 0),
-      potencia_kw: Number(item.potencia_kw || item.potencia || item.p || item.potInst || 0),
-      color: (() => {
-        const sys = String(item.tipo || item.sistema || item.nom_sist || item.n || '').trim();
-        // Buscar coincidencia exacta primero
-        if (TYPE_COLORS[sys]) return TYPE_COLORS[sys];
-        // Buscar coincidencia sin importar mayúsculas/minúsculas
-        const key = Object.keys(TYPE_COLORS).find(k => k.toLowerCase() === sys.toLowerCase());
-        return key ? TYPE_COLORS[key] : '#8b5cf6';
-      })(),
-      direccion: item.direccion || item.dirección || item.address || ''
-    })).filter(s => s.latitud && s.longitud);
-
-    // Extract unique sistemas
-    const sistemasSet = new Set();
-    state.dataset.forEach(s => sistemasSet.add(s.tipo));
-    state.sistemas = Array.from(sistemasSet).sort();
-    state.currentSistema = state.sistemas.includes('Lima Norte') ? 'Lima Norte' : (state.sistemas[0] || '');
-
-    applyFilters();
-    renderFilters();
-
-    document.getElementById('headerSub').textContent = state.dataset.length.toLocaleString() + ' SEDs cargadas';
-    showToast(state.dataset.length.toLocaleString() + ' SEDs cargadas' + (res.source === 'cache' ? ' (cache)' : ''), '✓');
-
-  } catch (err) {
-    console.error('Dataset error:', err);
-    showToast('Error cargando dataset: ' + err.message, '⚠️');
+  // Intento 2: Fallback a Drive directo (público)
+  console.log('[DIAG] Intento 2: Fallback a Google Drive...');
+  setLoadText('Cargando dataset...', 'Usando conexión alternativa');
+  try {
+    const res = await fetch(DATASET_FALLBACK_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    await processDataset(data);
+    showToast(state.dataset.length.toLocaleString() + ' SEDs cargadas (modo fallback)', '⚠️');
+    console.log('[DIAG] ✅ Dataset cargado desde FALLBACK (Drive directo)');
+  } catch (fallbackErr) {
+    console.error('[DIAG] Fallback también falló:', fallbackErr);
+    showToast('Error cargando dataset. Intenta recargar.', '⚠️');
     document.getElementById('headerSub').textContent = 'Error cargando datos';
   }
+}
+
+async function processDataset(data) {
+  // Normalize data - handle various JSON structures
+  if (Array.isArray(data)) {
+    state.dataset = data;
+  } else if (data.seds || data.data) {
+    state.dataset = data.seds || data.data;
+  } else {
+    const arr = Object.values(data).find(v => Array.isArray(v));
+    state.dataset = arr || [];
+  }
+
+  // Normalize fields
+  state.dataset = state.dataset.map(item => ({
+    id: item.id || item.codigo || item.c || `SED-${Math.random().toString(36).slice(2,8)}`,
+    codigo: item.codigo || item.c || item.id || '',
+    nombre: item.nombre || item.etiqueta || item.e || item.name || item.codigo || '',
+    tipo: item.tipo || item.sistema || item.nom_sist || item.n || 'Sin sistema',
+    latitud: Number(item.latitud || item.lat || item.latitude || 0),
+    longitud: Number(item.longitud || item.lon || item.lng || item.longitude || 0),
+    potencia_kw: Number(item.potencia_kw || item.potencia || item.p || item.potInst || 0),
+    color: (() => {
+      const sys = String(item.tipo || item.sistema || item.nom_sist || item.n || '').trim();
+      if (TYPE_COLORS[sys]) return TYPE_COLORS[sys];
+      const key = Object.keys(TYPE_COLORS).find(k => k.toLowerCase() === sys.toLowerCase());
+      return key ? TYPE_COLORS[key] : '#8b5cf6';
+    })(),
+    direccion: item.direccion || item.dirección || item.address || ''
+  })).filter(s => s.latitud && s.longitud);
+
+  // Extract unique sistemas
+  const sistemasSet = new Set();
+  state.dataset.forEach(s => sistemasSet.add(s.tipo));
+  state.sistemas = Array.from(sistemasSet).sort();
+  state.currentSistema = state.sistemas.includes('Lima Norte') ? 'Lima Norte' : (state.sistemas[0] || '');
+
+  applyFilters();
+  renderFilters();
+
+  document.getElementById('headerSub').textContent = state.dataset.length.toLocaleString() + ' SEDs cargadas';
+  console.log('[DIAG] Dataset procesado:', state.dataset.length, 'SEDs');
 }
 
 // ==================== AUTH ====================
@@ -1153,7 +1177,7 @@ function renderSEDList() {
     const sel = state.selectedSeds.has(sed.id);
     const dist = state.userLocation ? haversine(state.userLocation.lat, state.userLocation.lng, sed.latitud, sed.longitud) : null;
     return `
-      <div class="sed-card ${sel ? 'sel' : ''}" style="animation-delay:${i * 0.015}s;--card-c:${sed.color}" onclick="toggleSED('${sed.id}')">
+      <div class="sed-card ${sel ? 'sel' : ''}" data-sed-id="${sed.id}" style="animation-delay:${i * 0.015}s;--card-c:${sed.color}" onclick="toggleSED('${sed.id}')">
         <div class="sed-check">✓</div>
         <div class="sed-info">
           <div class="sed-name">${sed.nombre}</div>
@@ -1201,18 +1225,13 @@ function applyFilters() {
 }
 
 function toggleSED(id) {
-  // Guardar posición de scroll antes de renderizar
-  const listEl = document.getElementById('sedList');
-  const scrollTop = listEl ? listEl.scrollTop : 0;
-
   if (state.selectedSeds.has(id)) state.selectedSeds.delete(id);
   else state.selectedSeds.add(id);
-  renderSEDList();
+
+  // Solo actualizar visualmente la tarjeta específica (NO re-renderizar toda la lista)
+  updateSedCardVisual(id);
   updateMarker(id);
   updateSelectionUI();
-
-  // Restaurar posición de scroll (evita que baje automáticamente)
-  if (listEl) listEl.scrollTop = scrollTop;
 }
 
 function toggleFromPopup(id) {
@@ -1268,6 +1287,33 @@ function updateSelectionUI() {
   } else {
     bar.classList.remove('vis');
     stats.classList.remove('vis');
+  }
+}
+
+/* Actualizar visualmente SOLO la tarjeta específica (sin re-renderizar toda la lista) */
+function updateSedCardVisual(id) {
+  const card = document.querySelector(`.sed-card[data-sed-id="${id}"]`);
+  if (!card) return;
+
+  const isSelected = state.selectedSeds.has(id);
+  const check = card.querySelector('.sed-check');
+
+  // Toggle clase 'sel' en la tarjeta
+  card.classList.toggle('sel', isSelected);
+
+  // Toggle check visual
+  if (check) {
+    if (isSelected) {
+      check.style.background = 'linear-gradient(135deg, var(--accent-purple), var(--accent-blue))';
+      check.style.borderColor = 'transparent';
+      check.style.color = 'white';
+      check.textContent = '✓';
+    } else {
+      check.style.background = '';
+      check.style.borderColor = '';
+      check.style.color = 'transparent';
+      check.textContent = '';
+    }
   }
 }
 
