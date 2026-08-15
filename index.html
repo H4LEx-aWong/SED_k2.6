@@ -1242,32 +1242,49 @@ function clearSearch() {
 /* Filtrar tarjetas visualmente sin re-renderizar la lista completa */
 function filterSedCardsVisually(q) {
   const query = q.toLowerCase().trim();
-  const cards = document.querySelectorAll('.sed-card');
+  const listEl = document.getElementById('sedList');
+  if (!listEl) return;
+
+  // Obtener todas las tarjetas actuales
+  let cards = Array.from(listEl.querySelectorAll('.sed-card'));
 
   // Primero quitar el efecto de búsqueda anterior
   cards.forEach(card => card.classList.remove('search-match'));
 
-  if (!query) return; // Si no hay búsqueda, no resaltar nada
+  if (!query) return; // Si no hay búsqueda, no reordenar
 
-  // Encontrar la primera coincidencia y aplicar efecto eléctrico
-  let firstMatch = null;
-  cards.forEach(card => {
-    const sedId = card.dataset.sedId;
+  // Encontrar la primera coincidencia
+  let matchIndex = -1;
+  let matchCard = null;
+
+  for (let i = 0; i < cards.length; i++) {
+    const sedId = cards[i].dataset.sedId;
     const sed = state.dataset.find(s => s.id === sedId);
-    if (!sed) return;
+    if (!sed) continue;
 
-    const match = sed.nombre.toLowerCase().includes(query) || 
+    const isMatch = sed.nombre.toLowerCase().includes(query) || 
       sed.codigo.toLowerCase().includes(query);
 
-    if (match && !firstMatch) {
-      firstMatch = card;
-      card.classList.add('search-match');
-      // Hacer scroll suave hacia la tarjeta encontrada (solo dentro de la lista)
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (isMatch && matchIndex === -1) {
+      matchIndex = i;
+      matchCard = cards[i];
     }
-  });
+  }
 
-  if (firstMatch) {
+  if (matchCard && matchIndex > 0) {
+    // Mover la tarjeta encontrada a la primera posición
+    listEl.insertBefore(matchCard, listEl.firstChild);
+
+    // Aplicar efecto eléctrico
+    matchCard.classList.add('search-match');
+
+    // Scroll suave hacia arriba (primera posición)
+    listEl.scrollTop = 0;
+
+    showToast('SED encontrada y movida al inicio', '⚡');
+  } else if (matchCard && matchIndex === 0) {
+    // Ya está en primera posición, solo aplicar efecto
+    matchCard.classList.add('search-match');
     showToast('SED encontrada', '⚡');
   } else {
     showToast('No se encontró la SED', '🔍');
