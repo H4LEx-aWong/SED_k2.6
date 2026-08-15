@@ -1197,15 +1197,39 @@ function renderSEDList() {
 function onSearch(q) {
   state.searchQuery = q;
   document.getElementById('searchBox').classList.toggle('has-val', q.length > 0);
-  applyFilters();
+
+  // Solo filtrar visualmente las tarjetas existentes (NO re-renderizar toda la lista)
+  filterSedCardsVisually(q);
 }
 
 function clearSearch() {
   document.getElementById('searchIn').value = '';
   state.searchQuery = '';
   document.getElementById('searchBox').classList.remove('has-val');
-  applyFilters();
+
+  // Mostrar todas las tarjetas nuevamente
+  document.querySelectorAll('.sed-card').forEach(card => {
+    card.style.display = '';
+  });
 }
+/* Filtrar tarjetas visualmente sin re-renderizar la lista completa */
+function filterSedCardsVisually(q) {
+  const query = q.toLowerCase().trim();
+  const cards = document.querySelectorAll('.sed-card');
+
+  cards.forEach(card => {
+    const sedId = card.dataset.sedId;
+    const sed = state.dataset.find(s => s.id === sedId);
+    if (!sed) return;
+
+    const match = !query || 
+      sed.nombre.toLowerCase().includes(query) || 
+      sed.codigo.toLowerCase().includes(query);
+
+    card.style.display = match ? '' : 'none';
+  });
+}
+
 
 function applyFilters() {
   let result = state.dataset;
