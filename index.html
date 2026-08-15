@@ -880,7 +880,10 @@ const state = {
   markers: new Map(),
   userMarker: null,
   isSheetOpen: false,
-  routeOrder: []
+  routeOrder: [],
+  searchDebounceTimer: null,
+  renderCancelToken: 0,
+  lastSearchAt: 0
 };
 
 function generateDeviceId() {
@@ -1246,10 +1249,13 @@ function selectSistema(sys) {
 }
 
 
-function renderSEDList() {
+function renderSEDList(opts = {}) {
   const list = document.getElementById('sedList');
+  const token = ++state.renderCancelToken;
+
   if (state.filteredSeds.length === 0) {
     list.innerHTML = '<div class="empty"><div style="font-size:48px;margin-bottom:16px;opacity:0.5">🔍</div><h3 style="font-size:16px;color:var(--text-secondary);margin-bottom:8px">No se encontraron SEDs</h3><p style="font-size:13px">Intenta con otros términos de búsqueda</p></div>';
+    document.getElementById('sheetC').textContent = '0';
     return;
   }
 
@@ -1264,12 +1270,11 @@ function renderSEDList() {
   let toRender = [];
 
   if (state.searchQuery) {
-    // En búsqueda: ordenar por relevancia, pero seleccionadas primero
     const q = state.searchQuery.toLowerCase();
     const score = sed => {
       let s = 0;
-      const code = sed.codigo.toLowerCase();
-      const name = sed.nombre.toLowerCase();
+      const code = sed.codigoLower || (sed.codigoLower = sed.codigo.toLowerCase());
+      const name = sed.nombreLower || (sed.nombreLower = sed.nombre.toLowerCase());
       if (code === q) s += 100;
       else if (code.startsWith(q)) s += 50;
       else if (code.includes(q)) s += 20;
@@ -1278,36 +1283,53 @@ function renderSEDList() {
       else if (name.includes(q)) s += 10;
       return s;
     };
-    // Seleccionadas primero (si coinciden con filtro), luego resto ordenado
     const selMatching = selected.filter(s => score(s) > 0).sort((a, b) => score(b) - score(a));
     const unselMatching = unselected.filter(s => score(s) > 0).sort((a, b) => score(b) - score(a));
     toRender = [...selMatching, ...unselMatching];
+    // En móvil durante búsqueda activa, limitar para no bloquear UI
+    const mobileLimit = opts.limit || (window.innerWidth < 768 ? 30 : 100);
+    if (toRender.length > mobileLimit) toRender = toRender.slice(0, mobileLimit);
   } else {
-    // Sin búsqueda: seleccionadas primero (sin límite), luego unselected con límite
     toRender = [...selected, ...unselected.slice(0, Math.max(100, 100 - selected.length))];
   }
 
-  list.innerHTML = toRender.map((sed, i) => {
+  // Construcción DOM con DocumentFragment (más rápido que innerHTML string en móvil)
+  const frag = document.createDocumentFragment();
+  toRender.forEach((sed, i) => {
+    if (token !== state.renderCancelToken) return; // Cancelar si hay render más nuevo
     const sel = state.selectedSeds.has(sed.id);
     const dist = state.userLocation ? haversine(state.userLocation.lat, state.userLocation.lng, sed.latitud, sed.longitud) : null;
-    return `
-      <div class="sed-card ${sel ? 'sel' : ''}" data-sed-id="${sed.id}" style="animation-delay:${i * 0.015}s;--card-c:${sed.color}" onclick="toggleSED('${sed.id}', event)">
-        <div class="sed-check">✓</div>
-        <div class="sed-info">
-          <div class="sed-name">${sed.nombre}</div>
-          <div class="sed-meta">
-            <span class="sed-tag" style="background:${sed.color}20;color:${sed.color}">${sed.tipo}</span>
-            <span>${sed.codigo}</span>
-          </div>
-          ${dist !== null ? `<div class="sed-dist">↗ ${fmtDist(dist)}</div>` : ''}
-          <div class="sed-pow">⚡ ${sed.potencia_kw} kW</div>
-        </div>
-        <div class="sed-acts">
-          <button class="sed-act" onclick="event.stopPropagation();flyTo('${sed.id}')">🎯</button>
-          <button class="sed-act" onclick="event.stopPropagation();openMaps('${sed.id}')">🗺</button>
-        </div>
-      </div>`;
-  }).join('');
+
+    const card = document.createElement('div');
+    card.className = 'sed-card' + (sel ? ' sel' : '');
+    card.dataset.sedId = sed.id;
+    card.style.animationDelay = (i * 0.015) + 's';
+    card.style.setProperty('--card-c', sed.color);
+    card.onclick = () => toggleSED(sed.id, event);
+
+    let html = '<div class="sed-check">✓</div>';
+    html += '<div class="sed-info">';
+    html += '<div class="sed-name">' + escapeHtml(sed.nombre) + '</div>';
+    html += '<div class="sed-meta">';
+    html += '<span class="sed-tag" style="background:' + sed.color + '20;color:' + sed.color + '">' + escapeHtml(sed.tipo) + '</span>';
+    html += '<span>' + escapeHtml(sed.codigo) + '</span>';
+    html += '</div>';
+    if (dist !== null) html += '<div class="sed-dist">↗ ' + fmtDist(dist) + '</div>';
+    html += '<div class="sed-pow">⚡ ' + sed.potencia_kw + ' kW</div>';
+    html += '</div>';
+    html += '<div class="sed-acts">';
+    html += '<button class="sed-act" onclick="event.stopPropagation();flyTo('' + sed.id + '')">🎯</button>';
+    html += '<button class="sed-act" onclick="event.stopPropagation();openMaps('' + sed.id + '')">🗺</button>';
+    html += '</div>';
+
+    card.innerHTML = html;
+    frag.appendChild(card);
+  });
+
+  if (token !== state.renderCancelToken) return; // Cancelado
+
+  list.innerHTML = '';
+  list.appendChild(frag);
   document.getElementById('sheetC').textContent = state.filteredSeds.length.toLocaleString();
 }
 
@@ -1315,31 +1337,35 @@ function onSearch(q) {
   state.searchQuery = q;
   document.getElementById('searchBox').classList.toggle('has-val', q.length > 0);
 
-  // Quitar efecto de búsqueda anterior de todas las tarjetas
-  document.querySelectorAll('.sed-card.search-match').forEach(card => {
-    card.classList.remove('search-match');
-  });
-
-  // Guardar scroll position
-  const listEl = document.getElementById('sedList');
-  const scrollTop = listEl ? listEl.scrollTop : 0;
-
-  // Aplicar filtros y re-renderizar (ahora con reordenamiento de coincidencias)
-  applyFilters();
-
-  // Aplicar efecto eléctrico a la primera coincidencia después de renderizar
-  if (q) {
-    setTimeout(() => {
-      const firstCard = listEl.querySelector('.sed-card');
-      if (firstCard) {
-        firstCard.classList.add('search-match');
-        firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 50);
+  // Cancelar debounce anterior
+  if (state.searchDebounceTimer) {
+    clearTimeout(state.searchDebounceTimer);
+    state.searchDebounceTimer = null;
   }
 
-  // Restaurar scroll si no hay búsqueda
-  if (!q && listEl) listEl.scrollTop = scrollTop;
+  // Si la query está vacía, limpiar inmediatamente
+  if (!q) {
+    document.querySelectorAll('.sed-card.search-match').forEach(card => card.classList.remove('search-match'));
+    applyFilters({ skipMarkers: false });
+    return;
+  }
+
+  // Debounce: esperar a que el usuario deje de tipear (300ms en móvil, 150ms en PC)
+  const delay = window.innerWidth < 768 ? 300 : 150;
+  state.searchDebounceTimer = setTimeout(() => {
+    state.lastSearchAt = Date.now();
+    // Durante búsqueda activa NO re-renderizamos markers (muy pesado en móvil)
+    applyFilters({ skipMarkers: true });
+
+    // Efecto eléctrico en la primera coincidencia (sin scroll brusco)
+    const listEl = document.getElementById('sedList');
+    if (listEl) {
+      requestAnimationFrame(() => {
+        const firstCard = listEl.querySelector('.sed-card');
+        if (firstCard) firstCard.classList.add('search-match');
+      });
+    }
+  }, delay);
 }
 
 function clearSearch() {
@@ -1347,29 +1373,50 @@ function clearSearch() {
   state.searchQuery = '';
   document.getElementById('searchBox').classList.remove('has-val');
 
+  // Cancelar cualquier debounce pendiente
+  if (state.searchDebounceTimer) {
+    clearTimeout(state.searchDebounceTimer);
+    state.searchDebounceTimer = null;
+  }
+
   // Quitar efecto eléctrico de búsqueda de todas las tarjetas
   document.querySelectorAll('.sed-card.search-match').forEach(card => {
     card.classList.remove('search-match');
   });
 
-  // Re-aplicar filtros para volver al estado normal (sin reordenamiento de búsqueda)
-  applyFilters();
+  // Re-aplicar filtros para volver al estado normal
+  applyFilters({ skipMarkers: false });
 }
 
 
 
-function applyFilters() {
+function applyFilters(opts = {}) {
+  const { skipMarkers = false, limit = 0 } = opts;
+  const t0 = performance.now();
+
   let result = state.dataset;
   if (state.currentSistema) {
     result = result.filter(s => s.tipo === state.currentSistema);
   }
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
-    result = result.filter(s => s.nombre.toLowerCase().includes(q) || s.codigo.toLowerCase().includes(q));
+    // Optimización: startsWith para códigos es más rápido y relevante
+    result = result.filter(s => {
+      const code = s.codigoLower || (s.codigoLower = s.codigo.toLowerCase());
+      const name = s.nombreLower || (s.nombreLower = s.nombre.toLowerCase());
+      return code.includes(q) || name.includes(q);
+    });
   }
   state.filteredSeds = result;
-  renderSEDList();
-  renderMarkers();
+
+  // Renderizado diferido para no bloquear el hilo principal en móvil
+  requestAnimationFrame(() => {
+    renderSEDList({ limit });
+    if (!skipMarkers) renderMarkers();
+  });
+
+  const t1 = performance.now();
+  if (t1 - t0 > 16) console.log('[PERF] applyFilters lento:', (t1 - t0).toFixed(1), 'ms');
 }
 
 function toggleSED(id, event) {
