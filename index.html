@@ -331,7 +331,7 @@
     border-radius:var(--radius) var(--radius) 0 0;
     transform:translateY(calc(100% - 80px));
     transition:transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    max-height:85vh; min-height:60vh; display:flex; flex-direction:column;
+    max-height:85vh; display:flex; flex-direction:column;
     background:var(--glass-bg);
     backdrop-filter:blur(30px) saturate(180%);
     -webkit-backdrop-filter:blur(30px) saturate(180%);
@@ -446,7 +446,7 @@
   .chip-dot{width:7px; height:7px; border-radius:50%; background:currentColor;}
 
   /* SED List */
-  .sed-list{flex:1; overflow-y:auto; padding:0 20px; scrollbar-width:none; min-height:35vh;}
+  .sed-list{flex:1; overflow-y:auto; padding:0 20px; scrollbar-width:none;}
   .sed-list::-webkit-scrollbar{display:none;}
   .sed-card{
     padding:16px; margin-bottom:12px; border-radius:var(--radius-sm);
@@ -476,7 +476,7 @@
   .sed-act:hover{background:var(--glass-bg-hover); border-color:var(--glass-border-hover); color:var(--text-primary);}
   .sed-act:active{transform:scale(0.9); background:var(--accent-purple); color:white;}
 
-  .empty{text-align:center; padding:80px 20px; color:var(--text-muted); min-height:35vh; display:flex; flex-direction:column; align-items:center; justify-content:center;}
+  .empty{text-align:center; padding:50px 20px; color:var(--text-muted);}
   .empty svg{width:48px; height:48px; margin-bottom:14px; opacity:0.4;}
   .empty h3{font-size:16px; color:var(--text-secondary); margin-bottom:6px;}
 
@@ -614,90 +614,12 @@
     .contact-text{display:none;}
   }
 
-  
-  
-
-@media(min-width:768px){
+  @media(min-width:768px){
     .sheet{max-width:480px; left:50%; transform:translateX(-50%) translateY(calc(100% - 80px));}
     .sheet.open{transform:translateX(-50%) translateY(0);}
     .modal-c{max-width:480px; left:50%; transform:translateX(-50%) translateY(100%);}
     .modal-o.on .modal-c{transform:translateX(-50%) translateY(0);}
   }
-
-/* =========================================================
-   EFECTO ELÉCTRICO UNIFICADO
-   ========================================================= */
-
-@keyframes electricPulse {
-  0% { box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4), inset 0 0 0 0 rgba(168, 85, 247, 0.1); border-color: rgba(0, 245, 255, 0.5); }
-  25% { box-shadow: 0 0 20px 2px rgba(0, 245, 255, 0.3), inset 0 0 20px 0 rgba(168, 85, 247, 0.15); border-color: rgba(0, 245, 255, 0.8); }
-  50% { box-shadow: 0 0 40px 4px rgba(0, 245, 255, 0.2), inset 0 0 30px 0 rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.8); }
-  75% { box-shadow: 0 0 20px 2px rgba(0, 245, 255, 0.3), inset 0 0 20px 0 rgba(168, 85, 247, 0.15); border-color: rgba(0, 245, 255, 0.8); }
-  100% { box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4), inset 0 0 0 0 rgba(168, 85, 247, 0.1); border-color: rgba(0, 245, 255, 0.5); }
-}
-
-/* Clase reutilizable para glow eléctrico */
-.electric-glow {
-  animation: electricPulse 2s ease-in-out infinite;
-  border-color: var(--accent-cyan);
-}
-
-/* 1. Tarjeta SED seleccionada O encontrada en búsqueda */
-.sed-card.sel,
-.sed-card.search-match {
-  background: linear-gradient(90deg, rgba(0, 245, 255, 0.08), var(--glass-bg-light));
-}
-.sed-card.sel::before,
-.sed-card.search-match::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
-  border-radius: 3px 0 0 3px;
-}
-.sed-card.sel .sed-name,
-.sed-card.search-match .sed-name {
-  color: var(--accent-cyan);
-  text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
-}
-
-/* 2. Chips activos */
-.chip.on {
-  box-shadow: 0 4px 20px rgba(0, 245, 255, 0.25);
-}
-
-/* 3. Check visual cuando tarjeta está seleccionada */
-.sed-card.sel .sed-check {
-  box-shadow: 0 0 12px rgba(0, 245, 255, 0.5);
-}
-
-/* 4. Hover sutil en botones de acción (sin animación forzada) */
-.sed-act:hover,
-.header-btn:hover,
-.popup-btn:hover,
-.act-btn:hover,
-.modal-x:hover,
-.fab:hover {
-  border-color: var(--glass-border-hover);
-}
-
-/* 5. Inputs y controles enfocados */
-.mask-input:focus,
-.search-box:focus-within,
-.sed-select-trigger.open {
-  border-color: rgba(0, 245, 255, 0.4);
-  box-shadow: 0 0 0 3px rgba(0, 245, 255, 0.1), 0 0 20px rgba(0, 245, 255, 0.05);
-}
-
-/* 6. Botones primarios */
-.act-btn-p,
-.popup-btn-p,
-.fab-p,
-.fab-s {
-  animation: electricPulse 2s ease-in-out infinite;
-}
-
 </style>
 <base target="_blank">
 <base target="_blank">
@@ -820,7 +742,7 @@
         <div class="act-bar-l">Listas para generar ruta</div>
       </div>
       <div class="act-bar-btns">
-        <button class="act-btn act-btn-s" onclick="clearSelection()" title="Limpiar">🗑</button>
+        <button class="act-btn act-btn-s" onclick="clearSelection()">🗑</button>
         <button class="act-btn act-btn-p" onclick="generateRoute()">
           <span>🗺</span><span>Ver ruta</span>
         </button>
@@ -880,10 +802,7 @@ const state = {
   markers: new Map(),
   userMarker: null,
   isSheetOpen: false,
-  routeOrder: [],
-  searchDebounceTimer: null,
-  renderCancelToken: 0,
-  lastSearchAt: 0
+  routeOrder: []
 };
 
 function generateDeviceId() {
@@ -943,91 +862,67 @@ async function apiCall(action, payload = {}) {
   }
 }
 
-// ==================== LOAD DATASET (v3 con FALLBACK) ====================
-// Intenta backend primero, si falla usa Google Drive directo
-const DATASET_FALLBACK_URL = 'https://corsproxy.io/?https://drive.google.com/uc?export=download&id=1Vfobwz7cr0trmKRkwe_hFe4hmVlRNiwL';
-
+// ==================== LOAD DATASET FROM BACKEND (v3) ====================
+// El backend descarga el JSON desde Google Drive y lo sirve autenticado
 async function loadDataset() {
   setLoadText('Cargando dataset...', 'Solicitando al servidor');
-  console.log('[DIAG] loadDataset iniciado');
-  console.log('[DIAG] API_URL:', API_URL);
-  console.log('[DIAG] Token:', state.token ? 'Presente' : 'NO HAY TOKEN');
-  console.log('[DIAG] Empresa:', state.empresa);
-
-  // Intento 1: Backend (autenticado)
   try {
-    console.log('[DIAG] Intento 1: Backend...');
     const res = await apiCall('getDataset', {});
-    console.log('[DIAG] Respuesta backend:', res);
 
-    if (res.ok && res.dataset) {
-      await processDataset(res.dataset);
-      showToast(state.dataset.length.toLocaleString() + ' SEDs cargadas' + (res.source === 'cache' ? ' (cache)' : ''), '✓');
-      console.log('[DIAG] ✅ Dataset cargado desde BACKEND');
-      return;
+    if (!res.ok) {
+      throw new Error(res.error || 'Error del servidor');
     }
-    console.log('[DIAG] Backend respondió pero sin dataset, intentando fallback...');
-  } catch (backendErr) {
-    console.error('[DIAG] Backend falló:', backendErr.message);
-  }
 
-  // Intento 2: Fallback a Drive directo (público)
-  console.log('[DIAG] Intento 2: Fallback a Google Drive...');
-  setLoadText('Cargando dataset...', 'Usando conexión alternativa');
-  try {
-    const res = await fetch(DATASET_FALLBACK_URL);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    await processDataset(data);
-    showToast(state.dataset.length.toLocaleString() + ' SEDs cargadas (modo fallback)', '⚠️');
-    console.log('[DIAG] ✅ Dataset cargado desde FALLBACK (Drive directo)');
-  } catch (fallbackErr) {
-    console.error('[DIAG] Fallback también falló:', fallbackErr);
-    showToast('Error cargando dataset. Intenta recargar.', '⚠️');
+    let data = res.dataset;
+
+    // Normalize data - handle various JSON structures
+    if (Array.isArray(data)) {
+      state.dataset = data;
+    } else if (data.seds || data.data) {
+      state.dataset = data.seds || data.data;
+    } else {
+      // Try to find array in object
+      const arr = Object.values(data).find(v => Array.isArray(v));
+      state.dataset = arr || [];
+    }
+
+    // Normalize fields
+    state.dataset = state.dataset.map(item => ({
+      id: item.id || item.codigo || item.c || `SED-${Math.random().toString(36).slice(2,8)}`,
+      codigo: item.codigo || item.c || item.id || '',
+      nombre: item.nombre || item.etiqueta || item.e || item.name || item.codigo || '',
+      tipo: item.tipo || item.sistema || item.nom_sist || item.n || 'Sin sistema',
+      latitud: Number(item.latitud || item.lat || item.latitude || 0),
+      longitud: Number(item.longitud || item.lon || item.lng || item.longitude || 0),
+      potencia_kw: Number(item.potencia_kw || item.potencia || item.p || item.potInst || 0),
+      color: (() => {
+        const sys = String(item.tipo || item.sistema || item.nom_sist || item.n || '').trim();
+        // Buscar coincidencia exacta primero
+        if (TYPE_COLORS[sys]) return TYPE_COLORS[sys];
+        // Buscar coincidencia sin importar mayúsculas/minúsculas
+        const key = Object.keys(TYPE_COLORS).find(k => k.toLowerCase() === sys.toLowerCase());
+        return key ? TYPE_COLORS[key] : '#8b5cf6';
+      })(),
+      direccion: item.direccion || item.dirección || item.address || ''
+    })).filter(s => s.latitud && s.longitud);
+
+    // Extract unique sistemas
+    const sistemasSet = new Set();
+    state.dataset.forEach(s => sistemasSet.add(s.tipo));
+    state.sistemas = Array.from(sistemasSet).sort();
+    state.currentSistema = state.sistemas.includes('LIMA NORTE') ? 'LIMA NORTE' : (state.sistemas[0] || '');
+
+    applyFilters();
+    renderFilters();
+
+    document.getElementById('headerSub').textContent = state.dataset.length.toLocaleString() + ' SEDs cargadas';
+    showToast(state.dataset.length.toLocaleString() + ' SEDs cargadas' + (res.source === 'cache' ? ' (cache)' : ''), '✓');
+
+  } catch (err) {
+    console.error('Dataset error:', err);
+    showToast('Error cargando dataset: ' + err.message, '⚠️');
     document.getElementById('headerSub').textContent = 'Error cargando datos';
   }
-}
-
-async function processDataset(data) {
-  // Normalize data - handle various JSON structures
-  if (Array.isArray(data)) {
-    state.dataset = data;
-  } else if (data.seds || data.data) {
-    state.dataset = data.seds || data.data;
-  } else {
-    const arr = Object.values(data).find(v => Array.isArray(v));
-    state.dataset = arr || [];
-  }
-
-  // Normalize fields
-  state.dataset = state.dataset.map(item => ({
-    id: item.id || item.codigo || item.c || `SED-${Math.random().toString(36).slice(2,8)}`,
-    codigo: item.codigo || item.c || item.id || '',
-    nombre: item.nombre || item.etiqueta || item.e || item.name || item.codigo || '',
-    tipo: item.tipo || item.sistema || item.nom_sist || item.n || 'Sin sistema',
-    latitud: Number(item.latitud || item.lat || item.latitude || 0),
-    longitud: Number(item.longitud || item.lon || item.lng || item.longitude || 0),
-    potencia_kw: Number(item.potencia_kw || item.potencia || item.p || item.potInst || 0),
-    color: (() => {
-      const sys = String(item.tipo || item.sistema || item.nom_sist || item.n || '').trim();
-      if (TYPE_COLORS[sys]) return TYPE_COLORS[sys];
-      const key = Object.keys(TYPE_COLORS).find(k => k.toLowerCase() === sys.toLowerCase());
-      return key ? TYPE_COLORS[key] : '#8b5cf6';
-    })(),
-    direccion: item.direccion || item.dirección || item.address || ''
-  })).filter(s => s.latitud && s.longitud);
-
-  // Extract unique sistemas
-  const sistemasSet = new Set();
-  state.dataset.forEach(s => sistemasSet.add(s.tipo));
-  state.sistemas = Array.from(sistemasSet).sort();
-  state.currentSistema = state.sistemas.includes('Lima Norte') ? 'Lima Norte' : (state.sistemas[0] || '');
-
-  applyFilters();
-  renderFilters();
-
-  document.getElementById('headerSub').textContent = state.dataset.length.toLocaleString() + ' SEDs cargadas';
-  console.log('[DIAG] Dataset procesado:', state.dataset.length, 'SEDs');
 }
 
 // ==================== AUTH ====================
@@ -1226,12 +1121,7 @@ function toggleSedDropdown() {
 
 function selectSistema(sys) {
   state.currentSistema = sys;
-  // Solo quitar de la selección las SEDs que NO pertenecen al nuevo sistema
-  // (así las que sí pertenecen se mantienen seleccionadas y visibles)
-  for (const id of state.selectedSeds) {
-    const sed = state.dataset.find(s => s.id === id);
-    if (sed && sed.tipo !== sys) state.selectedSeds.delete(id);
-  }
+  state.selectedSeds.clear();
   updateSelectionUI();
 
   // Actualizar UI del dropdown
@@ -1249,187 +1139,68 @@ function selectSistema(sys) {
 }
 
 
-function renderSEDList(opts = {}) {
+function renderSEDList() {
   const list = document.getElementById('sedList');
-  const token = ++state.renderCancelToken;
-
   if (state.filteredSeds.length === 0) {
-    list.innerHTML = '<div class="empty"><div style="font-size:48px;margin-bottom:16px;opacity:0.5">🔍</div><h3 style="font-size:16px;color:var(--text-secondary);margin-bottom:8px">No se encontraron SEDs</h3><p style="font-size:13px">Intenta con otros términos de búsqueda</p></div>';
-    document.getElementById('sheetC').textContent = '0';
+    list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🔍</div><h3>No se encontraron SEDs</h3><p>Intenta con otros términos</p></div>';
     return;
   }
-
-  // Separar seleccionadas del resto para que NUNCA desaparezcan
-  const selected = [];
-  const unselected = [];
-  state.filteredSeds.forEach(sed => {
-    if (state.selectedSeds.has(sed.id)) selected.push(sed);
-    else unselected.push(sed);
-  });
-
-  let toRender = [];
-
-  if (state.searchQuery) {
-    const q = state.searchQuery.toLowerCase();
-    const score = sed => {
-      let s = 0;
-      const code = sed.codigoLower || (sed.codigoLower = sed.codigo.toLowerCase());
-      const name = sed.nombreLower || (sed.nombreLower = sed.nombre.toLowerCase());
-      if (code === q) s += 100;
-      else if (code.startsWith(q)) s += 50;
-      else if (code.includes(q)) s += 20;
-      if (name === q) s += 80;
-      else if (name.startsWith(q)) s += 40;
-      else if (name.includes(q)) s += 10;
-      return s;
-    };
-    const selMatching = selected.filter(s => score(s) > 0).sort((a, b) => score(b) - score(a));
-    const unselMatching = unselected.filter(s => score(s) > 0).sort((a, b) => score(b) - score(a));
-    toRender = [...selMatching, ...unselMatching];
-    // En móvil durante búsqueda activa, limitar para no bloquear UI
-    const mobileLimit = opts.limit || (window.innerWidth < 768 ? 30 : 100);
-    if (toRender.length > mobileLimit) toRender = toRender.slice(0, mobileLimit);
-  } else {
-    toRender = [...selected, ...unselected.slice(0, Math.max(100, 100 - selected.length))];
-  }
-
-  // Construcción DOM con DocumentFragment (más rápido que innerHTML string en móvil)
-  const frag = document.createDocumentFragment();
-  toRender.forEach((sed, i) => {
-    if (token !== state.renderCancelToken) return; // Cancelar si hay render más nuevo
+  const toRender = state.filteredSeds.slice(0, 100);
+  list.innerHTML = toRender.map((sed, i) => {
     const sel = state.selectedSeds.has(sed.id);
     const dist = state.userLocation ? haversine(state.userLocation.lat, state.userLocation.lng, sed.latitud, sed.longitud) : null;
-
-    const card = document.createElement('div');
-    card.className = 'sed-card' + (sel ? ' sel' : '');
-    card.dataset.sedId = sed.id;
-    card.style.animationDelay = (i * 0.015) + 's';
-    card.style.setProperty('--card-c', sed.color);
-    card.onclick = () => toggleSED(sed.id, event);
-
-    let html = '<div class="sed-check">✓</div>';
-    html += '<div class="sed-info">';
-    html += '<div class="sed-name">' + escapeHtml(sed.nombre) + '</div>';
-    html += '<div class="sed-meta">';
-    html += '<span class="sed-tag" style="background:' + sed.color + '20;color:' + sed.color + '">' + escapeHtml(sed.tipo) + '</span>';
-    html += '<span>' + escapeHtml(sed.codigo) + '</span>';
-    html += '</div>';
-    if (dist !== null) html += '<div class="sed-dist">↗ ' + fmtDist(dist) + '</div>';
-    html += '<div class="sed-pow">⚡ ' + sed.potencia_kw + ' kW</div>';
-    html += '</div>';
-    html += '<div class="sed-acts">';
-    html += '<button class="sed-act" onclick="event.stopPropagation();flyTo('' + sed.id + '')">🎯</button>';
-    html += '<button class="sed-act" onclick="event.stopPropagation();openMaps('' + sed.id + '')">🗺</button>';
-    html += '</div>';
-
-    card.innerHTML = html;
-    frag.appendChild(card);
-  });
-
-  if (token !== state.renderCancelToken) return; // Cancelado
-
-  list.innerHTML = '';
-  list.appendChild(frag);
+    return `
+      <div class="sed-card ${sel ? 'sel' : ''}" style="animation-delay:${i * 0.015}s;--card-c:${sed.color}" onclick="toggleSED('${sed.id}')">
+        <div class="sed-check">✓</div>
+        <div class="sed-info">
+          <div class="sed-name">${sed.nombre}</div>
+          <div class="sed-meta">
+            <span class="sed-tag" style="background:${sed.color}20;color:${sed.color}">${sed.tipo}</span>
+            <span>${sed.codigo}</span>
+          </div>
+          ${dist !== null ? `<div class="sed-dist">↗ ${fmtDist(dist)}</div>` : ''}
+          <div class="sed-pow">⚡ ${sed.potencia_kw} kW</div>
+        </div>
+        <div class="sed-acts">
+          <button class="sed-act" onclick="event.stopPropagation();flyTo('${sed.id}')">🎯</button>
+          <button class="sed-act" onclick="event.stopPropagation();openMaps('${sed.id}')">🗺</button>
+        </div>
+      </div>`;
+  }).join('');
   document.getElementById('sheetC').textContent = state.filteredSeds.length.toLocaleString();
 }
 
 function onSearch(q) {
   state.searchQuery = q;
   document.getElementById('searchBox').classList.toggle('has-val', q.length > 0);
-
-  // Cancelar debounce anterior
-  if (state.searchDebounceTimer) {
-    clearTimeout(state.searchDebounceTimer);
-    state.searchDebounceTimer = null;
-  }
-
-  // Si la query está vacía, limpiar inmediatamente
-  if (!q) {
-    document.querySelectorAll('.sed-card.search-match').forEach(card => card.classList.remove('search-match'));
-    applyFilters({ skipMarkers: false });
-    return;
-  }
-
-  // Debounce: esperar a que el usuario deje de tipear (300ms en móvil, 150ms en PC)
-  const delay = window.innerWidth < 768 ? 300 : 150;
-  state.searchDebounceTimer = setTimeout(() => {
-    state.lastSearchAt = Date.now();
-    // Durante búsqueda activa NO re-renderizamos markers (muy pesado en móvil)
-    applyFilters({ skipMarkers: true });
-
-    // Efecto eléctrico en la primera coincidencia (sin scroll brusco)
-    const listEl = document.getElementById('sedList');
-    if (listEl) {
-      requestAnimationFrame(() => {
-        const firstCard = listEl.querySelector('.sed-card');
-        if (firstCard) firstCard.classList.add('search-match');
-      });
-    }
-  }, delay);
+  applyFilters();
 }
 
 function clearSearch() {
   document.getElementById('searchIn').value = '';
   state.searchQuery = '';
   document.getElementById('searchBox').classList.remove('has-val');
-
-  // Cancelar cualquier debounce pendiente
-  if (state.searchDebounceTimer) {
-    clearTimeout(state.searchDebounceTimer);
-    state.searchDebounceTimer = null;
-  }
-
-  // Quitar efecto eléctrico de búsqueda de todas las tarjetas
-  document.querySelectorAll('.sed-card.search-match').forEach(card => {
-    card.classList.remove('search-match');
-  });
-
-  // Re-aplicar filtros para volver al estado normal
-  applyFilters({ skipMarkers: false });
+  applyFilters();
 }
 
-
-
-function applyFilters(opts = {}) {
-  const { skipMarkers = false, limit = 0 } = opts;
-  const t0 = performance.now();
-
+function applyFilters() {
   let result = state.dataset;
   if (state.currentSistema) {
     result = result.filter(s => s.tipo === state.currentSistema);
   }
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
-    // Optimización: startsWith para códigos es más rápido y relevante
-    result = result.filter(s => {
-      const code = s.codigoLower || (s.codigoLower = s.codigo.toLowerCase());
-      const name = s.nombreLower || (s.nombreLower = s.nombre.toLowerCase());
-      return code.includes(q) || name.includes(q);
-    });
+    result = result.filter(s => s.nombre.toLowerCase().includes(q) || s.codigo.toLowerCase().includes(q));
   }
   state.filteredSeds = result;
-
-  // Renderizado diferido para no bloquear el hilo principal en móvil
-  requestAnimationFrame(() => {
-    renderSEDList({ limit });
-    if (!skipMarkers) renderMarkers();
-  });
-
-  const t1 = performance.now();
-  if (t1 - t0 > 16) console.log('[PERF] applyFilters lento:', (t1 - t0).toFixed(1), 'ms');
+  renderSEDList();
+  renderMarkers();
 }
 
-function toggleSED(id, event) {
-  if (event) {
-    event.preventDefault();
-    event.stopPropagation();
-  }
-
+function toggleSED(id) {
   if (state.selectedSeds.has(id)) state.selectedSeds.delete(id);
   else state.selectedSeds.add(id);
-
-  // Solo actualizar visualmente la tarjeta específica (NO re-renderizar toda la lista)
-  updateSedCardVisual(id);
+  renderSEDList();
   updateMarker(id);
   updateSelectionUI();
 }
@@ -1451,7 +1222,7 @@ function flyTo(id) {
 
 function openMaps(id) {
   const sed = state.dataset.find(s => s.id === id);
-  if (sed) window.open(`https://www.google.com/maps/search/?api=1&query=${sed.latitud},${sed.longitud}`, '_blank');
+  if (sed) window.open(`https://www.google.com/maps/dir/?api=1&destination=${sed.latitud},${sed.longitud}`, '_blank');
 }
 
 function clearSelection() {
@@ -1487,33 +1258,6 @@ function updateSelectionUI() {
   } else {
     bar.classList.remove('vis');
     stats.classList.remove('vis');
-  }
-}
-
-/* Actualizar visualmente SOLO la tarjeta específica (sin re-renderizar toda la lista) */
-function updateSedCardVisual(id) {
-  const card = document.querySelector(`.sed-card[data-sed-id="${id}"]`);
-  if (!card) return;
-
-  const isSelected = state.selectedSeds.has(id);
-  const check = card.querySelector('.sed-check');
-
-  // Toggle clase 'sel' en la tarjeta
-  card.classList.toggle('sel', isSelected);
-
-  // Toggle check visual
-  if (check) {
-    if (isSelected) {
-      check.style.background = 'linear-gradient(135deg, var(--accent-purple), var(--accent-blue))';
-      check.style.borderColor = 'transparent';
-      check.style.color = 'white';
-      check.textContent = '✓';
-    } else {
-      check.style.background = '';
-      check.style.borderColor = '';
-      check.style.color = 'transparent';
-      check.textContent = '';
-    }
   }
 }
 
@@ -1603,8 +1347,6 @@ function openFullRoute() {
   window.open(url, '_blank');
 }
 
-
-
 // ==================== GPS ====================
 function locateUser() {
   if (!navigator.geolocation) { showToast('GPS no soportado', '⚠️'); return; }
@@ -1674,18 +1416,6 @@ handle.addEventListener('touchend', e => {
   }
 });
 
-// Prevenir que clics en tarjetas dentro del sheet afecten la posicion del sheet
-const sedListEl = document.getElementById('sedList');
-if (sedListEl) {
-  sedListEl.addEventListener('click', e => {
-    // Si el clic fue en una tarjeta o sus hijos, mantener el sheet abierto
-    if (e.target.closest('.sed-card')) {
-      state.isSheetOpen = true;
-      sheet.classList.add('open');
-    }
-  });
-}
-
 // Cerrar dropdown al hacer click fuera
 document.addEventListener('click', (e) => {
   const wrap = document.getElementById('sedSelectWrap');
@@ -1744,125 +1474,16 @@ document.addEventListener('DOMContentLoaded', () => {
     font-size:9px; color:var(--accent-orange); font-weight:600;
     margin-left:4px; vertical-align:middle;
   }
-
-  /* Contact Modal */
-  .contact-modal-o{
-    position:fixed; inset:0; z-index:6000;
-    display:flex; align-items:flex-end; justify-content:center;
-    opacity:0; pointer-events:none;
-    transition:opacity 0.4s ease;
-    background:rgba(0,0,0,0.6);
-    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
-  }
-  .contact-modal-o.on{opacity:1; pointer-events:all;}
-  .contact-modal-c{
-    width:100%; max-width:420px;
-    border-radius:var(--radius) var(--radius) 0 0;
-    transform:translateY(100%);
-    transition:transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    background:var(--glass-bg);
-    backdrop-filter:blur(40px) saturate(180%);
-    -webkit-backdrop-filter:blur(40px) saturate(180%);
-    border:1px solid var(--glass-border);
-    border-bottom:none;
-    box-shadow:var(--glass-shadow-lg);
-    padding:0 0 calc(env(safe-area-inset-bottom,0px) + 20px) 0;
-    position:relative;
-  }
-  .contact-modal-o.on .contact-modal-c{transform:translateY(0);}
-  .contact-modal-handle{
-    width:40px; height:4px; background:var(--text-muted);
-    border-radius:2px; margin:12px auto; opacity:0.4; cursor:pointer;
-  }
-  .contact-avatar-wrap{
-    text-align:center; padding:8px 0 16px;
-  }
-  .contact-avatar{
-    width:72px; height:72px; border-radius:50%;
-    background:linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-    display:inline-flex; align-items:center; justify-content:center;
-    font-size:36px; box-shadow:0 8px 30px rgba(168,85,247,0.3);
-    border:3px solid rgba(255,255,255,0.1);
-  }
-  .contact-name{
-    font-size:20px; font-weight:700; color:var(--text-primary);
-    text-align:center; padding:0 24px 4px;
-  }
-  .contact-msg{
-    font-size:14px; color:var(--text-secondary); line-height:1.7;
-    text-align:center; padding:0 28px 20px;
-  }
-  .contact-msg strong{
-    color:var(--accent-cyan); font-weight:600;
-  }
-  .contact-actions{
-    display:flex; gap:10px; padding:0 24px;
-  }
-  .contact-btn{
-    flex:1; padding:14px; border-radius:var(--radius-xs); border:none;
-    font-size:13px; font-weight:600; cursor:pointer;
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    transition:all 0.2s ease; -webkit-appearance:none;
-  }
-  .contact-btn-p{
-    background:linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
-    color:white; box-shadow:0 4px 20px rgba(168,85,247,0.3);
-  }
-  .contact-btn-p:hover{transform:translateY(-2px); box-shadow:0 8px 30px rgba(168,85,247,0.4);}
-  .contact-btn-s{
-    background:var(--glass-bg-light); color:var(--text-secondary);
-    border:1px solid var(--glass-border); backdrop-filter:blur(10px);
-  }
-  .contact-btn-s:hover{background:var(--glass-bg-hover); color:var(--text-primary);}
-  .contact-close{
-    position:absolute; top:16px; right:16px;
-    width:32px; height:32px; border-radius:50%;
-    background:var(--glass-bg-light); border:1px solid var(--glass-border);
-    color:var(--text-secondary); display:flex; align-items:center; justify-content:center;
-    cursor:pointer; font-size:14px; backdrop-filter:blur(10px);
-    transition:all 0.2s ease; -webkit-appearance:none;
-  }
-  .contact-close:hover{background:var(--glass-bg-hover); color:var(--text-primary);}
 </style>
 <div class="app-footer" id="appFooter">
-  <a onclick="showContactModal()">
+  <a onclick="showFooterMsg()">
     desarrollado por <span class="footer-brand">aWong.la</span>
     <span class="footer-badge">versión de prueba</span>
   </a>
 </div>
-
-<!-- Contact Modal -->
-<div class="contact-modal-o" id="contactModal" onclick="if(event.target===this)closeContactModal()">
-  <div class="contact-modal-c">
-    <div class="contact-modal-handle" onclick="closeContactModal()"></div>
-    <button class="contact-close" onclick="closeContactModal()">✕</button>
-    <div class="contact-avatar-wrap">
-      <div class="contact-avatar">🦎</div>
-    </div>
-    <div class="contact-name" id="contactName">Usuario</div>
-    <div class="contact-msg">
-      ¡Hola sabandija! 🦎<br><br>
-      En estos momentos estamos fuera y, por tanto, no podemos responder a tu mensaje.<br><br>
-      Por favor, déjanos un correo:<br>
-      <strong>l.a.aguilar.wong@gmail.com</strong>
-    </div>
-    <div class="contact-actions">
-      <button class="contact-btn contact-btn-s" onclick="closeContactModal()">Cerrar</button>
-      <button class="contact-btn contact-btn-p" onclick="window.open('mailto:l.a.aguilar.wong@gmail.com','_blank')">
-        <span>✉</span><span>Enviar correo</span>
-      </button>
-    </div>
-  </div>
-</div>
-
 <script>
-function showContactModal(){
-  const nameEl = document.getElementById('contactName');
-  nameEl.textContent = state.empresa || 'Usuario';
-  document.getElementById('contactModal').classList.add('on');
-}
-function closeContactModal(){
-  document.getElementById('contactModal').classList.remove('on');
+function showFooterMsg(){
+  showToast('hola sabandija', '🦎');
 }
 </script>
 
