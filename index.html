@@ -614,7 +614,34 @@
     .contact-text{display:none;}
   }
 
-  @media(min-width:768px){
+  
+  /* Efecto eléctrico de resaltado para SED encontrada */
+  @keyframes electricPulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4), inset 0 0 0 0 rgba(168, 85, 247, 0.1); border-color: rgba(0, 245, 255, 0.5); }
+    25% { box-shadow: 0 0 20px 2px rgba(0, 245, 255, 0.3), inset 0 0 20px 0 rgba(168, 85, 247, 0.15); border-color: rgba(0, 245, 255, 0.8); }
+    50% { box-shadow: 0 0 40px 4px rgba(0, 245, 255, 0.2), inset 0 0 30px 0 rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.8); }
+    75% { box-shadow: 0 0 20px 2px rgba(0, 245, 255, 0.3), inset 0 0 20px 0 rgba(168, 85, 247, 0.15); border-color: rgba(0, 245, 255, 0.8); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4), inset 0 0 0 0 rgba(168, 85, 247, 0.1); border-color: rgba(0, 245, 255, 0.5); }
+  }
+  .sed-card.search-match {
+    animation: electricPulse 2s ease-in-out infinite;
+    border: 1px solid var(--accent-cyan) !important;
+    background: linear-gradient(90deg, rgba(0, 245, 255, 0.08), var(--glass-bg-light)) !important;
+  }
+  .sed-card.search-match::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+    border-radius: 3px 0 0 3px;
+  }
+  .sed-card.search-match .sed-name {
+    color: var(--accent-cyan);
+    text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+  }
+
+@media(min-width:768px){
     .sheet{max-width:480px; left:50%; transform:translateX(-50%) translateY(calc(100% - 80px));}
     .sheet.open{transform:translateX(-50%) translateY(0);}
     .modal-c{max-width:480px; left:50%; transform:translateX(-50%) translateY(100%);}
@@ -1207,9 +1234,9 @@ function clearSearch() {
   state.searchQuery = '';
   document.getElementById('searchBox').classList.remove('has-val');
 
-  // Mostrar todas las tarjetas nuevamente
+  // Quitar efecto eléctrico de todas las tarjetas
   document.querySelectorAll('.sed-card').forEach(card => {
-    card.style.display = '';
+    card.classList.remove('search-match');
   });
 }
 /* Filtrar tarjetas visualmente sin re-renderizar la lista completa */
@@ -1217,17 +1244,34 @@ function filterSedCardsVisually(q) {
   const query = q.toLowerCase().trim();
   const cards = document.querySelectorAll('.sed-card');
 
+  // Primero quitar el efecto de búsqueda anterior
+  cards.forEach(card => card.classList.remove('search-match'));
+
+  if (!query) return; // Si no hay búsqueda, no resaltar nada
+
+  // Encontrar la primera coincidencia y aplicar efecto eléctrico
+  let firstMatch = null;
   cards.forEach(card => {
     const sedId = card.dataset.sedId;
     const sed = state.dataset.find(s => s.id === sedId);
     if (!sed) return;
 
-    const match = !query || 
-      sed.nombre.toLowerCase().includes(query) || 
+    const match = sed.nombre.toLowerCase().includes(query) || 
       sed.codigo.toLowerCase().includes(query);
 
-    card.style.display = match ? '' : 'none';
+    if (match && !firstMatch) {
+      firstMatch = card;
+      card.classList.add('search-match');
+      // Hacer scroll suave hacia la tarjeta encontrada (solo dentro de la lista)
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   });
+
+  if (firstMatch) {
+    showToast('SED encontrada', '⚡');
+  } else {
+    showToast('No se encontró la SED', '🔍');
+  }
 }
 
 
