@@ -647,6 +647,86 @@
     .modal-c{max-width:480px; left:50%; transform:translateX(-50%) translateY(100%);}
     .modal-o.on .modal-c{transform:translateX(-50%) translateY(0);}
   }
+
+/* =========================================================
+   EFECTOS ELÉCTRICOS PARA TODOS LOS ELEMENTOS SELECCIONABLES
+   ========================================================= */
+
+/* 1. Tarjetas SED seleccionadas */
+.sed-card.sel {
+  animation: electricPulse 2s ease-in-out infinite;
+  border: 1px solid var(--accent-cyan) !important;
+  background: linear-gradient(90deg, rgba(0, 245, 255, 0.08), var(--glass-bg-light)) !important;
+}
+.sed-card.sel::before {
+  background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple)) !important;
+}
+
+/* 2. Chips de filtro activos */
+.chip.on {
+  animation: electricPulse 2s ease-in-out infinite;
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 4px 20px rgba(0, 245, 255, 0.25);
+}
+
+/* 3. Opciones del dropdown seleccionadas */
+.sed-option.selected {
+  animation: electricPulse 2s ease-in-out infinite;
+  border-color: var(--accent-cyan);
+}
+
+/* 4. Check visual eléctrico cuando la tarjeta está seleccionada */
+.sed-card.sel .sed-check {
+  box-shadow: 0 0 12px rgba(0, 245, 255, 0.5);
+}
+
+/* 5. Botones de acción en hover / active */
+.sed-act:hover,
+.sed-act:active,
+.header-btn:hover,
+.popup-btn:hover,
+.popup-btn:active,
+.act-btn:hover,
+.act-btn:active,
+.modal-x:hover,
+.contact-btn:hover,
+.contact-btn:active,
+.gate-btn:hover,
+.fab:hover,
+.fab:active,
+.r-card:hover {
+  animation: electricPulse 2s ease-in-out infinite;
+  border-color: var(--accent-cyan) !important;
+}
+
+/* 6. Inputs y controles de búsqueda enfocados */
+.mask-input:focus,
+.search-box:focus-within,
+.sed-select-trigger.open {
+  animation: electricPulse 2s ease-in-out infinite;
+}
+
+/* 7. Botones primarios (ruta, contacto, FABs) */
+.act-btn-p,
+.popup-btn-p,
+.contact-btn-p,
+.fab-p,
+.fab-s {
+  animation: electricPulse 2s ease-in-out infinite;
+}
+
+/* 8. Login gate al interactuar */
+.gate-card:focus-within,
+.gate-btn:hover,
+.gate-btn:focus {
+  animation: electricPulse 2s ease-in-out infinite;
+}
+
+/* 9. Modal de contacto - avatar en hover */
+.contact-avatar:hover {
+  animation: electricPulse 2s ease-in-out infinite;
+}
+
 </style>
 <base target="_blank">
 <base target="_blank">
@@ -802,7 +882,7 @@
 
 // ==================== CONFIG ====================
 // ⚠️ REEMPLAZA ESTA URL con la de tu Google Apps Script desplegado
-const API_URL = 'https://script.google.com/macros/s/AKfycbx1XvvZj16lxssFEnsRefbeQUeOqUZU91kuGcOW2CdQvI3stxJEY8Ce-OGcM8Ca_ObWmQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbzAJx_iGIIsujqj9jHSAyrkLEWdSrWXJSxudCvl39y1sEIl_UKvsHncx3o3xRWwxhk0Tg/exec';
 // v3: El dataset se carga autenticado desde el backend (Google Apps Script)
 
 const TYPE_COLORS = {
