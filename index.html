@@ -802,7 +802,7 @@
 
 // ==================== CONFIG ====================
 // ⚠️ REEMPLAZA ESTA URL con la de tu Google Apps Script desplegado
-const API_URL = 'https://script.google.com/macros/s/AKfycbzAJx_iGIIsujqj9jHSAyrkLEWdSrWXJSxudCvl39y1sEIl_UKvsHncx3o3xRWwxhk0Tg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbx1XvvZj16lxssFEnsRefbeQUeOqUZU91kuGcOW2CdQvI3stxJEY8Ce-OGcM8Ca_ObWmQ/exec';
 // v3: El dataset se carga autenticado desde el backend (Google Apps Script)
 
 const TYPE_COLORS = {
@@ -1196,7 +1196,21 @@ function renderSEDList() {
     list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🔍</div><h3>No se encontraron SEDs</h3><p>Intenta con otros términos</p></div>';
     return;
   }
-  const toRender = state.filteredSeds.slice(0, 100);
+  // Si hay búsqueda activa, mostrar todas las coincidencias (sin límite de 100)
+  // y ordenar: coincidencias primero
+  let toRender = state.filteredSeds;
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    toRender = [...toRender].sort((a, b) => {
+      const aMatch = a.codigo.toLowerCase().includes(q) || a.nombre.toLowerCase().includes(q);
+      const bMatch = b.codigo.toLowerCase().includes(q) || b.nombre.toLowerCase().includes(q);
+      if (aMatch && !bMatch) return -1;
+      if (!aMatch && bMatch) return 1;
+      return 0;
+    });
+  } else {
+    toRender = toRender.slice(0, 100);
+  }
   list.innerHTML = toRender.map((sed, i) => {
     const sel = state.selectedSeds.has(sed.id);
     const dist = state.userLocation ? haversine(state.userLocation.lat, state.userLocation.lng, sed.latitud, sed.longitud) : null;
@@ -1225,8 +1239,26 @@ function onSearch(q) {
   state.searchQuery = q;
   document.getElementById('searchBox').classList.toggle('has-val', q.length > 0);
 
-  // Solo filtrar visualmente las tarjetas existentes (NO re-renderizar toda la lista)
-  filterSedCardsVisually(q);
+  // Guardar scroll position
+  const listEl = document.getElementById('sedList');
+  const scrollTop = listEl ? listEl.scrollTop : 0;
+
+  // Aplicar filtros y re-renderizar (ahora con reordenamiento de coincidencias)
+  applyFilters();
+
+  // Aplicar efecto eléctrico a la primera coincidencia después de renderizar
+  if (q) {
+    setTimeout(() => {
+      const firstCard = listEl.querySelector('.sed-card');
+      if (firstCard) {
+        firstCard.classList.add('search-match');
+        firstCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  }
+
+  // Restaurar scroll si no hay búsqueda
+  if (!q && listEl) listEl.scrollTop = scrollTop;
 }
 
 function clearSearch() {
@@ -1239,57 +1271,7 @@ function clearSearch() {
     card.classList.remove('search-match');
   });
 }
-/* Filtrar tarjetas visualmente sin re-renderizar la lista completa */
-function filterSedCardsVisually(q) {
-  const query = q.toLowerCase().trim();
-  const listEl = document.getElementById('sedList');
-  if (!listEl) return;
 
-  // Obtener todas las tarjetas actuales
-  let cards = Array.from(listEl.querySelectorAll('.sed-card'));
-
-  // Primero quitar el efecto de búsqueda anterior
-  cards.forEach(card => card.classList.remove('search-match'));
-
-  if (!query) return; // Si no hay búsqueda, no reordenar
-
-  // Encontrar la primera coincidencia
-  let matchIndex = -1;
-  let matchCard = null;
-
-  for (let i = 0; i < cards.length; i++) {
-    const sedId = cards[i].dataset.sedId;
-    const sed = state.dataset.find(s => s.id === sedId);
-    if (!sed) continue;
-
-    const isMatch = sed.nombre.toLowerCase().includes(query) || 
-      sed.codigo.toLowerCase().includes(query);
-
-    if (isMatch && matchIndex === -1) {
-      matchIndex = i;
-      matchCard = cards[i];
-    }
-  }
-
-  if (matchCard && matchIndex > 0) {
-    // Mover la tarjeta encontrada a la primera posición
-    listEl.insertBefore(matchCard, listEl.firstChild);
-
-    // Aplicar efecto eléctrico
-    matchCard.classList.add('search-match');
-
-    // Scroll suave hacia arriba (primera posición)
-    listEl.scrollTop = 0;
-
-    showToast('SED encontrada y movida al inicio', '⚡');
-  } else if (matchCard && matchIndex === 0) {
-    // Ya está en primera posición, solo aplicar efecto
-    matchCard.classList.add('search-match');
-    showToast('SED encontrada', '⚡');
-  } else {
-    showToast('No se encontró la SED', '🔍');
-  }
-}
 
 
 function applyFilters() {
