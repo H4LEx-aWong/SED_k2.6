@@ -331,7 +331,7 @@
     border-radius:var(--radius) var(--radius) 0 0;
     transform:translateY(calc(100% - 80px));
     transition:transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    max-height:85vh; display:flex; flex-direction:column;
+    max-height:85vh; min-height:60vh; display:flex; flex-direction:column;
     background:var(--glass-bg);
     backdrop-filter:blur(30px) saturate(180%);
     -webkit-backdrop-filter:blur(30px) saturate(180%);
@@ -446,7 +446,7 @@
   .chip-dot{width:7px; height:7px; border-radius:50%; background:currentColor;}
 
   /* SED List */
-  .sed-list{flex:1; overflow-y:auto; padding:0 20px; scrollbar-width:none;}
+  .sed-list{flex:1; overflow-y:auto; padding:0 20px; scrollbar-width:none; min-height:35vh;}
   .sed-list::-webkit-scrollbar{display:none;}
   .sed-card{
     padding:16px; margin-bottom:12px; border-radius:var(--radius-sm);
@@ -476,7 +476,7 @@
   .sed-act:hover{background:var(--glass-bg-hover); border-color:var(--glass-border-hover); color:var(--text-primary);}
   .sed-act:active{transform:scale(0.9); background:var(--accent-purple); color:white;}
 
-  .empty{text-align:center; padding:50px 20px; color:var(--text-muted);}
+  .empty{text-align:center; padding:80px 20px; color:var(--text-muted); min-height:35vh; display:flex; flex-direction:column; align-items:center; justify-content:center;}
   .empty svg{width:48px; height:48px; margin-bottom:14px; opacity:0.4;}
   .empty h3{font-size:16px; color:var(--text-secondary); margin-bottom:6px;}
 
@@ -1249,7 +1249,7 @@ function selectSistema(sys) {
 function renderSEDList() {
   const list = document.getElementById('sedList');
   if (state.filteredSeds.length === 0) {
-    list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🔍</div><h3>No se encontraron SEDs</h3><p>Intenta con otros términos</p></div>';
+    list.innerHTML = '<div class="empty"><div style="font-size:48px;margin-bottom:16px;opacity:0.5">🔍</div><h3 style="font-size:16px;color:var(--text-secondary);margin-bottom:8px">No se encontraron SEDs</h3><p style="font-size:13px">Intenta con otros términos de búsqueda</p></div>';
     return;
   }
 
