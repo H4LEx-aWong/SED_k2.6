@@ -615,31 +615,7 @@
   }
 
   
-  /* Efecto eléctrico de resaltado para SED encontrada */
-  @keyframes electricPulse {
-    0% { box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4), inset 0 0 0 0 rgba(168, 85, 247, 0.1); border-color: rgba(0, 245, 255, 0.5); }
-    25% { box-shadow: 0 0 20px 2px rgba(0, 245, 255, 0.3), inset 0 0 20px 0 rgba(168, 85, 247, 0.15); border-color: rgba(0, 245, 255, 0.8); }
-    50% { box-shadow: 0 0 40px 4px rgba(0, 245, 255, 0.2), inset 0 0 30px 0 rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.8); }
-    75% { box-shadow: 0 0 20px 2px rgba(0, 245, 255, 0.3), inset 0 0 20px 0 rgba(168, 85, 247, 0.15); border-color: rgba(0, 245, 255, 0.8); }
-    100% { box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4), inset 0 0 0 0 rgba(168, 85, 247, 0.1); border-color: rgba(0, 245, 255, 0.5); }
-  }
-  .sed-card.search-match {
-    animation: electricPulse 2s ease-in-out infinite;
-    border: 1px solid var(--accent-cyan) !important;
-    background: linear-gradient(90deg, rgba(0, 245, 255, 0.08), var(--glass-bg-light)) !important;
-  }
-  .sed-card.search-match::before {
-    content: '';
-    position: absolute;
-    left: 0; top: 0; bottom: 0;
-    width: 3px;
-    background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
-    border-radius: 3px 0 0 3px;
-  }
-  .sed-card.search-match .sed-name {
-    color: var(--accent-cyan);
-    text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
-  }
+  
 
 @media(min-width:768px){
     .sheet{max-width:480px; left:50%; transform:translateX(-50%) translateY(calc(100% - 80px));}
@@ -649,81 +625,76 @@
   }
 
 /* =========================================================
-   EFECTOS ELÉCTRICOS PARA TODOS LOS ELEMENTOS SELECCIONABLES
+   EFECTO ELÉCTRICO UNIFICADO
    ========================================================= */
 
-/* 1. Tarjetas SED seleccionadas */
-.sed-card.sel {
-  animation: electricPulse 2s ease-in-out infinite;
-  border: 1px solid var(--accent-cyan) !important;
-  background: linear-gradient(90deg, rgba(0, 245, 255, 0.08), var(--glass-bg-light)) !important;
-}
-.sed-card.sel::before {
-  background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple)) !important;
+@keyframes electricPulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4), inset 0 0 0 0 rgba(168, 85, 247, 0.1); border-color: rgba(0, 245, 255, 0.5); }
+  25% { box-shadow: 0 0 20px 2px rgba(0, 245, 255, 0.3), inset 0 0 20px 0 rgba(168, 85, 247, 0.15); border-color: rgba(0, 245, 255, 0.8); }
+  50% { box-shadow: 0 0 40px 4px rgba(0, 245, 255, 0.2), inset 0 0 30px 0 rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.8); }
+  75% { box-shadow: 0 0 20px 2px rgba(0, 245, 255, 0.3), inset 0 0 20px 0 rgba(168, 85, 247, 0.15); border-color: rgba(0, 245, 255, 0.8); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 245, 255, 0.4), inset 0 0 0 0 rgba(168, 85, 247, 0.1); border-color: rgba(0, 245, 255, 0.5); }
 }
 
-/* 2. Chips de filtro activos */
-.chip.on {
-  animation: electricPulse 2s ease-in-out infinite;
-  border-color: var(--accent-cyan) !important;
-  box-shadow: 0 4px 20px rgba(0, 245, 255, 0.25);
-}
-
-/* 3. Opciones del dropdown seleccionadas */
-.sed-option.selected {
+/* Clase reutilizable para glow eléctrico */
+.electric-glow {
   animation: electricPulse 2s ease-in-out infinite;
   border-color: var(--accent-cyan);
 }
 
-/* 4. Check visual eléctrico cuando la tarjeta está seleccionada */
+/* 1. Tarjeta SED seleccionada O encontrada en búsqueda */
+.sed-card.sel,
+.sed-card.search-match {
+  background: linear-gradient(90deg, rgba(0, 245, 255, 0.08), var(--glass-bg-light));
+}
+.sed-card.sel::before,
+.sed-card.search-match::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--accent-cyan), var(--accent-purple));
+  border-radius: 3px 0 0 3px;
+}
+.sed-card.sel .sed-name,
+.sed-card.search-match .sed-name {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+}
+
+/* 2. Chips activos */
+.chip.on {
+  box-shadow: 0 4px 20px rgba(0, 245, 255, 0.25);
+}
+
+/* 3. Check visual cuando tarjeta está seleccionada */
 .sed-card.sel .sed-check {
   box-shadow: 0 0 12px rgba(0, 245, 255, 0.5);
 }
 
-/* 5. Botones de acción en hover / active */
+/* 4. Hover sutil en botones de acción (sin animación forzada) */
 .sed-act:hover,
-.sed-act:active,
 .header-btn:hover,
 .popup-btn:hover,
-.popup-btn:active,
 .act-btn:hover,
-.act-btn:active,
 .modal-x:hover,
-.contact-btn:hover,
-.contact-btn:active,
-.gate-btn:hover,
-.fab:hover,
-.fab:active,
-.r-card:hover {
-  animation: electricPulse 2s ease-in-out infinite;
-  border-color: var(--accent-cyan) !important;
+.fab:hover {
+  border-color: var(--glass-border-hover);
 }
 
-/* 6. Inputs y controles de búsqueda enfocados */
+/* 5. Inputs y controles enfocados */
 .mask-input:focus,
 .search-box:focus-within,
 .sed-select-trigger.open {
-  animation: electricPulse 2s ease-in-out infinite;
+  border-color: rgba(0, 245, 255, 0.4);
+  box-shadow: 0 0 0 3px rgba(0, 245, 255, 0.1), 0 0 20px rgba(0, 245, 255, 0.05);
 }
 
-/* 7. Botones primarios (ruta, contacto, FABs) */
+/* 6. Botones primarios */
 .act-btn-p,
 .popup-btn-p,
-.contact-btn-p,
 .fab-p,
 .fab-s {
-  animation: electricPulse 2s ease-in-out infinite;
-}
-
-/* 8. Login gate al interactuar */
-.gate-card:focus-within,
-.gate-btn:hover,
-.gate-btn:focus {
-  animation: electricPulse 2s ease-in-out infinite;
-}
-
-/* 9. Modal de contacto - avatar en hover */
-.contact-avatar:hover {
   animation: electricPulse 2s ease-in-out infinite;
 }
 
@@ -1252,7 +1223,12 @@ function toggleSedDropdown() {
 
 function selectSistema(sys) {
   state.currentSistema = sys;
-  state.selectedSeds.clear();
+  // Solo quitar de la selección las SEDs que NO pertenecen al nuevo sistema
+  // (así las que sí pertenecen se mantienen seleccionadas y visibles)
+  for (const id of state.selectedSeds) {
+    const sed = state.dataset.find(s => s.id === id);
+    if (sed && sed.tipo !== sys) state.selectedSeds.delete(id);
+  }
   updateSelectionUI();
 
   // Actualizar UI del dropdown
@@ -1276,21 +1252,41 @@ function renderSEDList() {
     list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🔍</div><h3>No se encontraron SEDs</h3><p>Intenta con otros términos</p></div>';
     return;
   }
-  // Si hay búsqueda activa, mostrar todas las coincidencias (sin límite de 100)
-  // y ordenar: coincidencias primero
-  let toRender = state.filteredSeds;
+
+  // Separar seleccionadas del resto para que NUNCA desaparezcan
+  const selected = [];
+  const unselected = [];
+  state.filteredSeds.forEach(sed => {
+    if (state.selectedSeds.has(sed.id)) selected.push(sed);
+    else unselected.push(sed);
+  });
+
+  let toRender = [];
+
   if (state.searchQuery) {
+    // En búsqueda: ordenar por relevancia, pero seleccionadas primero
     const q = state.searchQuery.toLowerCase();
-    toRender = [...toRender].sort((a, b) => {
-      const aMatch = a.codigo.toLowerCase().includes(q) || a.nombre.toLowerCase().includes(q);
-      const bMatch = b.codigo.toLowerCase().includes(q) || b.nombre.toLowerCase().includes(q);
-      if (aMatch && !bMatch) return -1;
-      if (!aMatch && bMatch) return 1;
-      return 0;
-    });
+    const score = sed => {
+      let s = 0;
+      const code = sed.codigo.toLowerCase();
+      const name = sed.nombre.toLowerCase();
+      if (code === q) s += 100;
+      else if (code.startsWith(q)) s += 50;
+      else if (code.includes(q)) s += 20;
+      if (name === q) s += 80;
+      else if (name.startsWith(q)) s += 40;
+      else if (name.includes(q)) s += 10;
+      return s;
+    };
+    // Seleccionadas primero (si coinciden con filtro), luego resto ordenado
+    const selMatching = selected.filter(s => score(s) > 0).sort((a, b) => score(b) - score(a));
+    const unselMatching = unselected.filter(s => score(s) > 0).sort((a, b) => score(b) - score(a));
+    toRender = [...selMatching, ...unselMatching];
   } else {
-    toRender = toRender.slice(0, 100);
+    // Sin búsqueda: seleccionadas primero (sin límite), luego unselected con límite
+    toRender = [...selected, ...unselected.slice(0, Math.max(100, 100 - selected.length))];
   }
+
   list.innerHTML = toRender.map((sed, i) => {
     const sel = state.selectedSeds.has(sed.id);
     const dist = state.userLocation ? haversine(state.userLocation.lat, state.userLocation.lng, sed.latitud, sed.longitud) : null;
@@ -1319,6 +1315,11 @@ function onSearch(q) {
   state.searchQuery = q;
   document.getElementById('searchBox').classList.toggle('has-val', q.length > 0);
 
+  // Quitar efecto de búsqueda anterior de todas las tarjetas
+  document.querySelectorAll('.sed-card.search-match').forEach(card => {
+    card.classList.remove('search-match');
+  });
+
   // Guardar scroll position
   const listEl = document.getElementById('sedList');
   const scrollTop = listEl ? listEl.scrollTop : 0;
@@ -1346,10 +1347,13 @@ function clearSearch() {
   state.searchQuery = '';
   document.getElementById('searchBox').classList.remove('has-val');
 
-  // Quitar efecto eléctrico de todas las tarjetas
-  document.querySelectorAll('.sed-card').forEach(card => {
+  // Quitar efecto eléctrico de búsqueda de todas las tarjetas
+  document.querySelectorAll('.sed-card.search-match').forEach(card => {
     card.classList.remove('search-match');
   });
+
+  // Re-aplicar filtros para volver al estado normal (sin reordenamiento de búsqueda)
+  applyFilters();
 }
 
 
