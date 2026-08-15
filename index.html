@@ -743,9 +743,6 @@
       </div>
       <div class="act-bar-btns">
         <button class="act-btn act-btn-s" onclick="clearSelection()" title="Limpiar">🗑</button>
-        <button class="act-btn act-btn-s" onclick="openSelectedInMaps()" title="Ver en Maps" style="background:linear-gradient(135deg, rgba(59,130,246,0.6), rgba(0,245,255,0.6)); color:white; border:none;">
-          <span>🗺</span><span>Maps</span>
-        </button>
         <button class="act-btn act-btn-p" onclick="generateRoute()">
           <span>🗺</span><span>Ver ruta</span>
         </button>
@@ -1177,7 +1174,7 @@ function renderSEDList() {
     const sel = state.selectedSeds.has(sed.id);
     const dist = state.userLocation ? haversine(state.userLocation.lat, state.userLocation.lng, sed.latitud, sed.longitud) : null;
     return `
-      <div class="sed-card ${sel ? 'sel' : ''}" data-sed-id="${sed.id}" style="animation-delay:${i * 0.015}s;--card-c:${sed.color}" onclick="toggleSED('${sed.id}')">
+      <div class="sed-card ${sel ? 'sel' : ''}" data-sed-id="${sed.id}" style="animation-delay:${i * 0.015}s;--card-c:${sed.color}" onclick="toggleSED('${sed.id}', event)">
         <div class="sed-check">✓</div>
         <div class="sed-info">
           <div class="sed-name">${sed.nombre}</div>
@@ -1224,7 +1221,12 @@ function applyFilters() {
   renderMarkers();
 }
 
-function toggleSED(id) {
+function toggleSED(id, event) {
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   if (state.selectedSeds.has(id)) state.selectedSeds.delete(id);
   else state.selectedSeds.add(id);
 
@@ -1251,7 +1253,7 @@ function flyTo(id) {
 
 function openMaps(id) {
   const sed = state.dataset.find(s => s.id === id);
-  if (sed) window.open(`https://www.google.com/maps/dir/?api=1&destination=${sed.latitud},${sed.longitud}`, '_blank');
+  if (sed) window.open(`https://www.google.com/maps/search/?api=1&query=${sed.latitud},${sed.longitud}`, '_blank');
 }
 
 function clearSelection() {
@@ -1403,28 +1405,7 @@ function openFullRoute() {
   window.open(url, '_blank');
 }
 
-/* ═══════════════════════ VER EN MAPS (sin calcular ruta) ═══════════════════════ */
-function openSelectedInMaps() {
-  const codes = Array.from(state.selectedSeds);
-  if (codes.length === 0) { showToast('Selecciona al menos una SED', '⚠️'); return; }
 
-  const selected = state.dataset.filter(s => state.selectedSeds.has(s.id));
-
-  if (selected.length === 1) {
-    // Una sola SED: abrir directamente en Maps
-    const s = selected[0];
-    const url = `https://www.google.com/maps/search/?api=1&query=${s.latitud},${s.longitud}`;
-    window.open(url, '_blank');
-    showToast('Abriendo ubicación en Maps', '🗺');
-  } else {
-    // Múltiples SEDs: abrir con waypoints
-    const origin = state.userLocation ? `${state.userLocation.lat},${state.userLocation.lng}` : '';
-    const dests = selected.map(s => `${s.latitud},${s.longitud}`);
-    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dests[dests.length - 1]}&waypoints=${dests.slice(0, -1).join('|')}`;
-    window.open(url, '_blank');
-    showToast('Abriendo ' + selected.length + ' ubicaciones en Maps', '🗺');
-  }
-}
 
 // ==================== GPS ====================
 function locateUser() {
@@ -1494,6 +1475,18 @@ handle.addEventListener('touchend', e => {
     sheet.classList.toggle('open', state.isSheetOpen);
   }
 });
+
+// Prevenir que clics en tarjetas dentro del sheet afecten la posicion del sheet
+const sedListEl = document.getElementById('sedList');
+if (sedListEl) {
+  sedListEl.addEventListener('click', e => {
+    // Si el clic fue en una tarjeta o sus hijos, mantener el sheet abierto
+    if (e.target.closest('.sed-card')) {
+      state.isSheetOpen = true;
+      sheet.classList.add('open');
+    }
+  });
+}
 
 // Cerrar dropdown al hacer click fuera
 document.addEventListener('click', (e) => {
