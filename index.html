@@ -295,8 +295,40 @@
   .m-pin::after{content:''; width:20px; height:20px; margin:7px 0 0 7px; background:var(--bg-deep); position:absolute; border-radius:50%;}
   .m-icon{position:absolute; width:100%; height:100%; display:flex; align-items:center; justify-content:center; z-index:2; font-size:12px; color:white; transform:rotate(45deg); margin-top:-2px;}
   .m-wrap.sel .m-pin{transform:rotate(-45deg) scale(1.3); box-shadow:0 0 25px currentColor;}
-  .m-pulse{position:absolute; width:36px; height:36px; border-radius:50%; left:50%; top:50%; margin:-18px 0 0 -18px; animation:mPulse 2s ease-out infinite; opacity:0;}
+  .m-pulse{position:absolute; width:36px; height:36px; border-radius:50%; left:50%; top:50%; margin:-18px 0 0 -18px; opacity:0;}
+  /* El pulso solo anima el marcador seleccionado: evita repintar cientos de pines en móvil */
+  .m-wrap.sel .m-pulse{animation:mPulse 2s ease-out infinite;}
   @keyframes mPulse{0%{transform:scale(0.5);opacity:0.8}100%{transform:scale(2.5);opacity:0}}
+
+  /* Sector polygons & labels */
+  .sector-label-icon{background:none;border:none;}
+  .sector-tag{
+    display:flex; align-items:center; gap:6px;
+    padding:6px 12px; border-radius:20px;
+    background:rgba(15,15,35,0.85);
+    border:1px solid var(--sc, var(--accent-purple));
+    box-shadow:0 0 12px color-mix(in srgb, var(--sc, #a855f7) 45%, transparent);
+    font-size:11px; font-weight:700; white-space:nowrap;
+    color:var(--text-primary); pointer-events:none;
+    transform:translate(-50%,-50%);
+  }
+  .sector-tag .st-dot{width:8px;height:8px;border-radius:50%;background:var(--sc);box-shadow:0 0 6px var(--sc);flex-shrink:0;}
+  .sector-tag .st-count{
+    background:var(--sc); color:#0a0a1a;
+    padding:1px 7px; border-radius:10px; font-size:10px; font-weight:800;
+  }
+  /* Botón flotante para volver a la vista de sectores */
+  .sector-back{
+    position:fixed; left:16px; bottom:140px; z-index:1000;
+    width:54px; height:54px; border-radius:50%; border:none;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:white; cursor:pointer;
+    transition:all 0.3s ease;
+    background:linear-gradient(135deg, rgba(34,197,94,0.8), rgba(0,245,255,0.8));
+    box-shadow:var(--glass-shadow);
+    -webkit-appearance:none;
+  }
+  .sector-back:active{transform:scale(0.92);}
 
   /* User marker */
   .u-wrap{position:relative; width:22px; height:22px;}
@@ -698,6 +730,8 @@
 
   <div class="map-wrap"><div id="map"></div></div>
 
+  <button class="sector-back" id="btnSectors" style="display:none" onclick="backToSectors()" title="Ver sectores">🗂</button>
+
   <div class="fabs">
     <button class="fab fab-s" onclick="locateUser()">
       📍
@@ -910,8 +944,11 @@ async function loadDataset() {
     const sistemasSet = new Set();
     state.dataset.forEach(s => sistemasSet.add(s.tipo));
     state.sistemas = Array.from(sistemasSet).sort();
-    state.currentSistema = state.sistemas.includes('LIMA NORTE') ? 'LIMA NORTE' : (state.sistemas[0] || '');
+    // Iniciar en "vista de sectores": sin sistema seleccionado y sin marcadores.
+    // Solo se dibujan los polígonos de sector (muy livianos), las SEDs se cargan al tocar un sector.
+    state.currentSistema = '';
 
+    buildSectors();
     applyFilters();
     renderFilters();
 
@@ -993,9 +1030,107 @@ function setLoadText(text, sub) {
 
 // ==================== MAP ====================
 function initMap() {
-  state.map = L.map('map', { zoomControl: false, attributionControl: false }).setView([-11.2, -77.0], 9);
+  state.map = L.map('map', { zoomControl: false, attributionControl: false, preferCanvas: true }).setView([-11.2, -77.0], 9);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' }).addTo(state.map);
   L.control.zoom({ position: 'bottomright' }).addTo(state.map);
+}
+
+// ==================== SECTORES ====================
+// Envolvente convexa (monotone chain) sobre puntos [lat, lon]
+function convexHull(points) {
+  const uniq = new Map();
+  points.forEach(p => uniq.set(p[0] + ',' + p[1], p));
+  const pts = Array.from(uniq.values()).sort((a, b) => a[1] - b[1] || a[0] - b[0]);
+  if (pts.length < 3) return pts;
+  const cross = (o, a, b) => (a[1] - o[1]) * (b[0] - o[0]) - (a[0] - o[0]) * (b[1] - o[1]);
+  const lower = [], upper = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  lower.pop(); upper.pop();
+  return lower.concat(upper);
+}
+
+function buildSectors() {
+  clearSectorLayers();
+  const bySys = new Map();
+  state.dataset.forEach(s => {
+    if (!bySys.has(s.tipo)) bySys.set(s.tipo, []);
+    bySys.get(s.tipo).push(s);
+  });
+  bySys.forEach((seds, sys) => {
+    const color = TYPE_COLORS[sys] || '#8b5cf6';
+    const pts = seds.map(s => [s.latitud, s.longitud]);
+    let shape;
+    if (pts.length >= 3) {
+      shape = L.polygon(convexHull(pts), {
+        color, weight: 2, opacity: 0.85,
+        fillColor: color, fillOpacity: 0.10, smoothFactor: 2
+      });
+    } else {
+      shape = L.circle(pts[0], { color, weight: 2, opacity: 0.85, fillColor: color, fillOpacity: 0.10, radius: 4000 });
+    }
+    shape.on('click', () => selectSistema(sys));
+    shape.addTo(state.map);
+
+    const center = shape.getBounds().getCenter();
+    const label = L.marker(center, {
+      interactive: false, keyboard: false,
+      icon: L.divIcon({
+        className: 'sector-label-icon', iconSize: null,
+        html: `<div class="sector-tag" style="--sc:${color}"><span class="st-dot"></span><span>${escapeHtml(sys.toUpperCase())}</span><span class="st-count">${seds.length}</span></div>`
+      })
+    }).addTo(state.map);
+
+    state.sectorLayers.set(sys, { shape, label });
+    state.sectorBounds.set(sys, shape.getBounds());
+  });
+}
+
+function clearSectorLayers() {
+  state.sectorLayers.forEach(({ shape, label }) => {
+    state.map.removeLayer(shape);
+    state.map.removeLayer(label);
+  });
+  state.sectorLayers.clear();
+}
+
+function setSectorsVisible(visible) {
+  state.sectorLayers.forEach(({ shape, label }) => {
+    if (visible) {
+      if (!state.map.hasLayer(shape)) shape.addTo(state.map);
+      if (!state.map.hasLayer(label)) label.addTo(state.map);
+    } else {
+      if (state.map.hasLayer(shape)) state.map.removeLayer(shape);
+      if (state.map.hasLayer(label)) state.map.removeLayer(label);
+    }
+  });
+}
+
+function showSectorBackBtn(show) {
+  document.getElementById('btnSectors').style.display = show ? 'flex' : 'none';
+}
+
+function backToSectors() {
+  state.currentSistema = '';
+  state.searchQuery = '';
+  document.getElementById('searchIn').value = '';
+  document.getElementById('searchBox').classList.remove('has-val');
+  state.selectedSeds.clear();
+  updateSelectionUI();
+  document.querySelectorAll('.sed-option').forEach(o => o.classList.remove('selected'));
+  updateSelectTrigger();
+  applyFilters(); // sin sistema y sin búsqueda => no se dibujan marcadores
+  setSectorsVisible(true);
+  showSectorBackBtn(false);
+  state.map.flyTo([-11.2, -77.0], 9, { duration: 0.8 });
+  showToast('Vista de sectores: toca un sector para ver sus SEDs', '🗂');
 }
 
 function createMarker(sed, isSelected) {
@@ -1032,12 +1167,18 @@ function createMarker(sed, isSelected) {
 function renderMarkers() {
   state.markers.forEach(m => state.map.removeLayer(m));
   state.markers.clear();
-  const toShow = state.filteredSeds.slice(0, 500);
+  // Límite de seguridad: como normalmente solo se muestra UN sector,
+  // el número real de marcadores será mucho menor que este tope.
+  const MAX_MARKERS = 400;
+  const toShow = state.filteredSeds.slice(0, MAX_MARKERS);
   toShow.forEach(sed => {
     const m = createMarker(sed, state.selectedSeds.has(sed.id));
     m.addTo(state.map);
     state.markers.set(sed.id, m);
   });
+  if (state.filteredSeds.length > MAX_MARKERS) {
+    showToast(`Mostrando ${MAX_MARKERS} de ${state.filteredSeds.length} SEDs. Usa el buscador o elige un sector.`, '⚠️');
+  }
 }
 
 function updateMarker(sedId) {
@@ -1069,7 +1210,14 @@ function renderFilters() {
     return a.localeCompare(b);
   });
 
-  dropdown.innerHTML = sortedSistemas.map(sys => {
+  const sectorViewOption = `
+    <div class="sed-option ${!state.currentSistema ? 'selected' : ''}" data-value="" onclick="backToSectors()">
+      <span class="sed-option-dot" style="background:linear-gradient(135deg,#22c55e,#00f5ff);box-shadow:0 0 6px #22c55e"></span>
+      <span>🗂 VISTA DE SECTORES</span>
+      <span class="sed-option-check">✓</span>
+    </div>`;
+
+  dropdown.innerHTML = sectorViewOption + sortedSistemas.map(sys => {
     const color = TYPE_COLORS[sys] || '#8b5cf6';
     const isSelected = state.currentSistema === sys;
     return `
@@ -1134,15 +1282,29 @@ function selectSistema(sys) {
   document.getElementById('sedSelectDropdown').classList.remove('open');
   document.getElementById('sedSelectTrigger').classList.remove('open');
 
+  // Ocultar polígonos de sector y dibujar solo las SEDs del sistema elegido
+  setSectorsVisible(false);
   applyFilters();
-  showToast('Sistema: ' + sys, '📍');
+  showSectorBackBtn(true);
+
+  // Volar a los límites del sector
+  const bounds = state.sectorBounds.get(sys);
+  if (bounds && bounds.isValid()) {
+    state.map.flyToBounds(bounds.pad(0.15), { duration: 0.9 });
+  }
+  showToast('Sector: ' + sys + ' · ' + state.filteredSeds.length + ' SEDs', '📍');
 }
 
 
 function renderSEDList() {
   const list = document.getElementById('sedList');
   if (state.filteredSeds.length === 0) {
-    list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🔍</div><h3>No se encontraron SEDs</h3><p>Intenta con otros términos</p></div>';
+    if (!state.currentSistema && !state.searchQuery) {
+      list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🗂</div><h3>Vista de sectores</h3><p>Toca un sector en el mapa o elige un sistema arriba para ver sus subestaciones. También puedes buscar en todo el dataset.</p></div>';
+    } else {
+      list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🔍</div><h3>No se encontraron SEDs</h3><p>Intenta con otros términos</p></div>';
+    }
+    document.getElementById('sheetC').textContent = '0';
     return;
   }
   const toRender = state.filteredSeds.slice(0, 100);
@@ -1184,6 +1346,13 @@ function clearSearch() {
 }
 
 function applyFilters() {
+  // Vista de sectores: sin sistema ni búsqueda => no se dibuja ningún marcador
+  if (!state.currentSistema && !state.searchQuery) {
+    state.filteredSeds = [];
+    renderSEDList();
+    renderMarkers();
+    return;
+  }
   let result = state.dataset;
   if (state.currentSistema) {
     result = result.filter(s => s.tipo === state.currentSistema);
