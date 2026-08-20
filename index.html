@@ -516,27 +516,28 @@
   .empty h3{font-size:16px; color:var(--text-secondary); margin-bottom:6px;}
 
   .act-bar{
-    position:fixed; bottom:0; left:0; right:0; z-index:2500;
-    padding:20px;
-    transform:translateY(100%);
+    position:fixed; bottom:210px; right:16px; left:auto; z-index:2500;
+    padding:0;
+    transform:translateX(120%);
     transition:transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    background:linear-gradient(180deg, transparent 0%, rgba(10,10,26,0.8) 30%);
+    background:none;
   }
-  .act-bar.vis{transform:translateY(0);}
+  .act-bar.vis{transform:translateX(0);}
   .act-bar-in{
-    padding:16px 20px; border-radius:var(--radius-sm);
-    display:flex; align-items:center; justify-content:space-between;
+    padding:14px; border-radius:var(--radius-sm);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
     background:var(--glass-bg);
     backdrop-filter:blur(30px) saturate(180%);
     -webkit-backdrop-filter:blur(30px) saturate(180%);
     border:1px solid var(--glass-border);
     box-shadow:var(--glass-shadow-lg);
+    min-width:64px;
   }
-  .act-bar-info{display:flex; flex-direction:column;}
-  .act-bar-c{font-size:16px; font-weight:700;}
-  .act-bar-l{font-size:11px; color:var(--text-muted);}
-  .act-bar-btns{display:flex; gap:10px;}
-  .act-btn{padding:12px 20px; border-radius:var(--radius-xs); border:none; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all 0.2s ease; -webkit-appearance:none;}
+  .act-bar-info{display:flex; flex-direction:column; align-items:center; gap:4px; margin-bottom:4px;}
+  .act-bar-c{font-size:15px; font-weight:700; text-align:center;}
+  .act-bar-l{font-size:10px; color:var(--text-muted); text-align:center; max-width:80px; line-height:1.3;}
+  .act-bar-btns{display:flex; flex-direction:column; gap:8px; width:100%;}
+  .act-btn{padding:10px; border-radius:var(--radius-xs); border:none; font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:all 0.2s ease; -webkit-appearance:none; width:100%;}
   .act-btn-p{background:linear-gradient(135deg, var(--accent-purple), var(--accent-pink)); color:white; box-shadow:0 4px 20px rgba(168,85,247,0.3);}
   .act-btn-s{background:var(--glass-bg-light); color:var(--text-secondary); border:1px solid var(--glass-border); backdrop-filter:blur(10px);}
   .act-btn:hover{transform:translateY(-2px);}
@@ -767,13 +768,13 @@
   <div class="act-bar" id="actBar">
     <div class="act-bar-in">
       <div class="act-bar-info">
-        <div class="act-bar-c" id="actC">0 seleccionadas</div>
-        <div class="act-bar-l">Listas para generar ruta</div>
+        <div class="act-bar-c" id="actC">0</div>
+        <div class="act-bar-l">seleccionadas</div>
       </div>
       <div class="act-bar-btns">
-        <button class="act-btn act-btn-s" onclick="clearSelection()">🗑</button>
-        <button class="act-btn act-btn-p" onclick="generateRoute()">
-          <span>🗺</span><span>Ver ruta</span>
+        <button class="act-btn act-btn-s" onclick="clearSelection()" title="Limpiar">🗑</button>
+        <button class="act-btn act-btn-p" onclick="generateRoute()" title="Ver ruta">
+          <span>🗺</span>
         </button>
       </div>
     </div>
@@ -800,16 +801,14 @@
       <div class="modal-b">
         <div class="gps-hint">
           <strong>⚠️ GPS bloqueado</strong><br>
-          Tu navegador bloqueó el acceso a la ubicación. Puedes:<br>
-          • Habilitar el permiso en la configuración del navegador<br>
-          • Ingresar coordenadas manualmente aquí abajo
+          Pega una ubicación de Google Maps o coordenadas:<br>
+          • <code style="color:var(--accent-cyan)">-11.2, -77.0</code><br>
+          • <code style="color:var(--accent-cyan)">https://maps.google.com/.../@-11.2,-77.0...</code>
         </div>
-        <div class="gps-manual-row">
-          <input type="text" class="gps-manual-input" id="gpsLat" placeholder="Latitud" value="-11.2">
-          <input type="text" class="gps-manual-input" id="gpsLng" placeholder="Longitud" value="-77.0">
-        </div>
-        <button class="act-btn act-btn-p" style="width:100%;justify-content:center;margin-bottom:10px" onclick="setManualLocation()">
-          <span>📍</span><span>Usar estas coordenadas</span>
+        <textarea class="gps-manual-input" id="gpsPaste" rows="3" placeholder="Pega aquí la ubicación de Maps o coordenadas..." oninput="previewGpsParse()"></textarea>
+        <div id="gpsParsePreview" style="font-size:12px;color:var(--text-muted);margin-bottom:12px;min-height:18px;"></div>
+        <button class="act-btn act-btn-p" style="width:100%;justify-content:center;margin-bottom:10px" onclick="parseAndSetLocation()">
+          <span>📍</span><span>Usar ubicación</span>
         </button>
         <button class="act-btn act-btn-s" style="width:100%;justify-content:center" onclick="useDefaultLocation()">
           <span>🎯</span><span>Usar ubicación por defecto (Lima)</span>
@@ -1207,6 +1206,15 @@ function initMap() {
 
   initMarkerLayers();
 
+  let _moveDebounce = null;
+  state.map.on('moveend', () => {
+    if (!state.currentSistema) return;
+    clearTimeout(_moveDebounce);
+    _moveDebounce = setTimeout(() => {
+      applyFilters();
+    }, 200);
+  });
+
   state.map.on('zoomend', () => {
     if (state.currentSistema || state.searchQuery) {
       renderMarkers();
@@ -1334,6 +1342,8 @@ function renderSEDList() {
   if (state.filteredSeds.length === 0) {
     if (!state.currentSistema && !state.searchQuery) {
       list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🗂</div><h3>Vista de sectores</h3><p>Toca un sector en el mapa o elige un sistema arriba para ver sus subestaciones. También puedes buscar en todo el dataset.</p></div>';
+    } else if (state.currentSistema && !state.searchQuery) {
+      list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">📍</div><h3>Acércate para descubrir SEDs</h3><p>Mueve el mapa o haz zoom para revelar subestaciones dentro de 1 km.</p></div>';
     } else {
       list.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">🔍</div><h3>No se encontraron SEDs</h3><p>Intenta con otros términos</p></div>';
     }
@@ -1519,6 +1529,11 @@ function applyFilters() {
   let result = state.dataset;
   if (state.currentSistema) {
     result = result.filter(s => s.tipo === state.currentSistema);
+    // Filtro de proximidad: solo SEDs dentro de 1 km del centro del mapa
+    if (state.map) {
+      const center = state.map.getCenter();
+      result = result.filter(s => haversine(center.lat, center.lng, s.latitud, s.longitud) <= 1.0);
+    }
   }
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
@@ -1586,7 +1601,7 @@ function updateSelectionUI() {
 
   if (count > 0) {
     bar.classList.add('vis');
-    actC.textContent = count + ' seleccionada' + (count !== 1 ? 's' : '');
+    actC.textContent = count;
     const selected = state.dataset.filter(s => state.selectedSeds.has(s.id));
     const power = selected.reduce((sum, s) => sum + s.potencia_kw, 0);
     statPow.textContent = power.toLocaleString() + ' kW';
@@ -1744,18 +1759,69 @@ function closeGpsModal() {
   document.getElementById('gpsModal').classList.remove('on');
 }
 
-function setManualLocation() {
-  const lat = parseFloat(document.getElementById('gpsLat').value);
-  const lng = parseFloat(document.getElementById('gpsLng').value);
-  if (isNaN(lat) || isNaN(lng)) {
-    showToast('Coordenadas inválidas', '⚠️');
+function previewGpsParse() {
+  const text = document.getElementById('gpsPaste').value.trim();
+  const preview = document.getElementById('gpsParsePreview');
+  if (!text) { preview.textContent = ''; return; }
+
+  let lat, lng;
+  const urlMatch = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (urlMatch) {
+    lat = parseFloat(urlMatch[1]);
+    lng = parseFloat(urlMatch[2]);
+  } else {
+    const coordMatch = text.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+    if (coordMatch) {
+      lat = parseFloat(coordMatch[1]);
+      lng = parseFloat(coordMatch[2]);
+    }
+  }
+
+  if (lat !== undefined && lng !== undefined && !isNaN(lat) && !isNaN(lng)) {
+    preview.textContent = 'Detectado: ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+    preview.style.color = 'var(--accent-green)';
+  } else {
+    preview.textContent = 'Esperando coordenadas válidas...';
+    preview.style.color = 'var(--text-muted)';
+  }
+}
+
+function parseAndSetLocation() {
+  const text = document.getElementById('gpsPaste').value.trim();
+  const preview = document.getElementById('gpsParsePreview');
+  if (!text) {
+    preview.textContent = 'Pega una ubicación primero';
+    preview.style.color = 'var(--danger)';
     return;
   }
+
+  let lat, lng;
+  const urlMatch = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  if (urlMatch) {
+    lat = parseFloat(urlMatch[1]);
+    lng = parseFloat(urlMatch[2]);
+  } else {
+    const coordMatch = text.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+    if (coordMatch) {
+      lat = parseFloat(coordMatch[1]);
+      lng = parseFloat(coordMatch[2]);
+    }
+  }
+
+  if (lat === undefined || lng === undefined || isNaN(lat) || isNaN(lng)) {
+    preview.textContent = 'No se pudieron leer coordenadas válidas';
+    preview.style.color = 'var(--danger)';
+    return;
+  }
+
+  preview.textContent = 'Detectado: ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+  preview.style.color = 'var(--accent-green)';
+
   state.userLocation = { lat, lng };
   addUserMarker();
   renderSEDList();
   closeGpsModal();
-  showToast('Ubicación manual establecida', '✓');
+  showToast('Ubicación establecida', '✓');
 }
 
 function useDefaultLocation() {
