@@ -793,6 +793,27 @@
     </div>
   </div>
 
+  <!-- GPS Choice Modal -->
+  <div class="modal-o" id="gpsChoiceModal">
+    <div class="modal-c">
+      <div class="modal-h">
+        <div class="modal-t">📍 Tu Ubicación</div>
+        <button class="modal-x" onclick="closeGpsChoiceModal()">✕</button>
+      </div>
+      <div class="modal-b" style="display:flex;flex-direction:column;gap:12px;padding-bottom:30px;">
+        <div class="gps-hint" style="margin-bottom:4px;">
+          <strong>¿Cómo deseas establecer tu ubicación?</strong>
+        </div>
+        <button class="act-btn act-btn-p" style="width:100%;justify-content:center;padding:16px;" onclick="chooseGpsOption('gps')">
+          <span style="font-size:18px;">📡</span><span>Usar GPS del dispositivo</span>
+        </button>
+        <button class="act-btn act-btn-s" style="width:100%;justify-content:center;padding:16px;" onclick="chooseGpsOption('manual')">
+          <span style="font-size:18px;">✏️</span><span>Ingresar manualmente</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- GPS Manual Modal -->
   <div class="modal-o" id="gpsModal">
     <div class="modal-c">
@@ -1770,33 +1791,18 @@ function openFullRoute() {
 
 // ==================== GPS ROBUSTO: manejo de permisos + manual ====================
 function locateUser() {
+  openGpsChoiceModal();
+}
+
+function requestGeolocation() {
   if (!navigator.geolocation) {
     showToast('Tu navegador no soporta GPS', '⚠️');
-    openGpsModal();
+    setTimeout(openGpsModal, 800);
     return;
   }
 
   showToast('Detectando ubicación...', '📍');
 
-  // Intentar detectar si el permiso ya fue denegado
-  if (navigator.permissions && navigator.permissions.query) {
-    navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
-      if (permissionStatus.state === 'denied') {
-        showToast('GPS bloqueado. Toca para ingresar manualmente', '⚠️');
-        setTimeout(openGpsModal, 1500);
-        return;
-      }
-      requestGeolocation();
-    }).catch(() => {
-      // Si permissions.query falla, intentar directamente
-      requestGeolocation();
-    });
-  } else {
-    requestGeolocation();
-  }
-}
-
-function requestGeolocation() {
   navigator.geolocation.getCurrentPosition(
     pos => {
       state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -1820,12 +1826,66 @@ function requestGeolocation() {
   );
 }
 
+function openGpsChoiceModal() {
+  document.getElementById('gpsChoiceModal').classList.add('on');
+}
+function closeGpsChoiceModal() {
+  document.getElementById('gpsChoiceModal').classList.remove('on');
+}
+function chooseGpsOption(opt) {
+  closeGpsChoiceModal();
+  if (opt === 'gps') {
+    requestGeolocation();
+  } else {
+    openGpsModal();
+  }
+}
+
 function openGpsModal() {
   document.getElementById('gpsModal').classList.add('on');
+  document.getElementById('gpsPaste').value = '';
+  const preview = document.getElementById('gpsParsePreview');
+  preview.textContent = '';
+  preview.style.color = '';
 }
 
 function closeGpsModal() {
   document.getElementById('gpsModal').classList.remove('on');
+}
+
+function extractCoords(text) {
+  // Patrón @lat,lng (Google Maps URL)
+  let m = text.match(/@(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  // Patrón coordenadas sueltas lat, lng
+  m = text.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+  if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+  return null;
+}
+
+function isUrl(text) {
+  return /^https?:\/\//i.test(text);
+}
+
+async function resolveMapUrl(url) {
+  // Si ya tiene coords visibles, no necesitamos resolver
+  if (extractCoords(url)) return url;
+
+  // Intentar con proxies CORS para resolver redirecciones de URLs acortadas
+  const proxies = [
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url='
+  ];
+
+  for (const proxy of proxies) {
+    try {
+      const resp = await fetch(proxy + encodeURIComponent(url), { redirect: 'follow' });
+      const text = await resp.text();
+      if (text && text.length > 0) return text;
+    } catch (e) {}
+  }
+
+  return null;
 }
 
 function previewGpsParse() {
@@ -1833,60 +1893,53 @@ function previewGpsParse() {
   const preview = document.getElementById('gpsParsePreview');
   if (!text) { preview.textContent = ''; return; }
 
-  let lat, lng;
-  const urlMatch = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (urlMatch) {
-    lat = parseFloat(urlMatch[1]);
-    lng = parseFloat(urlMatch[2]);
-  } else {
-    const coordMatch = text.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
-    if (coordMatch) {
-      lat = parseFloat(coordMatch[1]);
-      lng = parseFloat(coordMatch[2]);
-    }
-  }
-
-  if (lat !== undefined && lng !== undefined && !isNaN(lat) && !isNaN(lng)) {
-    preview.textContent = 'Detectado: ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+  const coords = extractCoords(text);
+  if (coords) {
+    preview.textContent = 'Detectado: ' + coords.lat.toFixed(5) + ', ' + coords.lng.toFixed(5);
     preview.style.color = 'var(--accent-green)';
+  } else if (isUrl(text)) {
+    preview.textContent = 'Enlace detectado. Presiona "Usar ubicación" para resolver.';
+    preview.style.color = 'var(--accent-cyan)';
   } else {
     preview.textContent = 'Esperando coordenadas válidas...';
     preview.style.color = 'var(--text-muted)';
   }
 }
 
-function parseAndSetLocation() {
+async function parseAndSetLocation() {
   const text = document.getElementById('gpsPaste').value.trim();
   const preview = document.getElementById('gpsParsePreview');
+
   if (!text) {
     preview.textContent = 'Pega una ubicación primero';
     preview.style.color = 'var(--danger)';
     return;
   }
 
-  let lat, lng;
-  const urlMatch = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (urlMatch) {
-    lat = parseFloat(urlMatch[1]);
-    lng = parseFloat(urlMatch[2]);
-  } else {
-    const coordMatch = text.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
-    if (coordMatch) {
-      lat = parseFloat(coordMatch[1]);
-      lng = parseFloat(coordMatch[2]);
+  // 1. Intentar extraer coords directamente
+  let coords = extractCoords(text);
+
+  // 2. Si no hay coords y es URL, intentar resolver (enlaces acortados)
+  if (!coords && isUrl(text)) {
+    preview.textContent = 'Resolviendo enlace...';
+    preview.style.color = 'var(--accent-cyan)';
+
+    const resolved = await resolveMapUrl(text);
+    if (resolved) {
+      coords = extractCoords(resolved);
     }
   }
 
-  if (lat === undefined || lng === undefined || isNaN(lat) || isNaN(lng)) {
-    preview.textContent = 'No se pudieron leer coordenadas válidas';
+  if (!coords) {
+    preview.textContent = 'No se pudieron leer coordenadas. Intenta pegar coordenadas directas o una URL de Maps completa.';
     preview.style.color = 'var(--danger)';
     return;
   }
 
-  preview.textContent = 'Detectado: ' + lat.toFixed(5) + ', ' + lng.toFixed(5);
+  preview.textContent = 'Detectado: ' + coords.lat.toFixed(5) + ', ' + coords.lng.toFixed(5);
   preview.style.color = 'var(--accent-green)';
 
-  state.userLocation = { lat, lng };
+  state.userLocation = coords;
   addUserMarker();
   renderSEDList();
   closeGpsModal();
