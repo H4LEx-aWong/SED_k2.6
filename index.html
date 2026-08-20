@@ -304,9 +304,11 @@
   .m-pin::after{content:''; width:20px; height:20px; margin:7px 0 0 7px; background:var(--bg-deep); position:absolute; border-radius:50%;}
   .m-icon{position:absolute; width:100%; height:100%; display:flex; align-items:center; justify-content:center; z-index:2; font-size:12px; color:white; transform:rotate(45deg); margin-top:-2px;}
   .m-wrap.sel .m-pin{transform:rotate(-45deg) scale(1.3); box-shadow:0 0 25px currentColor;}
+  .m-wrap.hl .m-pin{transform:rotate(-45deg) scale(1.3); box-shadow:0 0 25px currentColor;}
 
   .m-pulse{position:absolute; width:36px; height:36px; border-radius:50%; left:50%; top:50%; margin:-18px 0 0 -18px; opacity:0; will-change:transform,opacity; transform:translateZ(0);}
   .m-wrap.sel .m-pulse{animation:mPulse 2s ease-out infinite;}
+  .m-wrap.hl .m-pulse{animation:mPulse 2s ease-out infinite;}
   @keyframes mPulse{
     0%{transform:scale(0.5) translateZ(0); opacity:0.8}
     100%{transform:scale(2.5) translateZ(0); opacity:0}
@@ -857,7 +859,8 @@ const state = {
   isSheetOpen: false,
   routeOrder: [],
   sectorLayers: new Map(),
-  sectorBounds: new Map()
+  sectorBounds: new Map(),
+  highlightedId: null
 };
 
 function generateDeviceId() {
@@ -936,14 +939,16 @@ function renderMarkers() {
       }
 
       let popupCache = null;
-      circle.bindPopup('', { closeButton: false, offset: [0, -5] });
+      circle.bindPopup('', { closeButton: false, offset: [0, -5], autoPan: false });
       circle.on('popupopen', function() {
         if (!popupCache) popupCache = buildPopupHTML(sed);
         circle.setPopupContent(popupCache);
       });
+      circle.on('popupclose', () => unhighlightMarker());
 
       circle.on('click', () => {
-        flyTo(sed.id);
+        highlightMarker(sed.id);
+        circle.openPopup();
       });
       circle.addTo(_canvasLayerGroup);
       state.markers.set(sed.id, circle);
@@ -973,8 +978,9 @@ function createDivMarker(sed, isSelected) {
     marker.setPopupContent(popupCache);
   });
 
-  marker.bindPopup('', { closeButton: false, offset: [0, -10] });
-  marker.on('click', () => marker.openPopup());
+  marker.on('popupclose', () => unhighlightMarker());
+  marker.bindPopup('', { closeButton: false, offset: [0, -10], autoPan: false });
+  marker.on('click', () => { highlightMarker(sed.id); marker.openPopup(); });
   return marker;
 }
 
@@ -993,14 +999,14 @@ function updateMarker(sedId) {
       if (wrap) {
         // Toggle clase .sel
         wrap.classList.toggle('sel', sel);
-        // Manejar el pulse: agregar o quitar según estado
+        // Manejar el pulse: agregar o quitar según estado (solo si no está highlighteado)
         let pulse = wrap.querySelector('.m-pulse');
         if (sel && !pulse) {
           pulse = document.createElement('div');
           pulse.className = 'm-pulse';
           pulse.style.cssText = `background:${sed.color}`;
           wrap.insertBefore(pulse, wrap.firstChild);
-        } else if (!sel && pulse) {
+        } else if (!sel && !wrap.classList.contains('hl') && pulse) {
           pulse.remove();
         }
       }
@@ -1016,17 +1022,80 @@ function updateMarker(sedId) {
     }
   } else {
     // Es canvas circle - solo actualizar estilo
+    const isHl = state.highlightedId === sedId;
     m.setStyle({
-      radius: sel ? 8 : 5,
-      color: sel ? '#fff' : sed.color,
-      weight: sel ? 2 : 1,
-      fillOpacity: sel ? 1 : 0.7
+      radius: (sel || isHl) ? 8 : 5,
+      color: (sel || isHl) ? '#fff' : sed.color,
+      weight: (sel || isHl) ? 2 : 1,
+      fillOpacity: (sel || isHl) ? 1 : 0.7
     });
     // Actualizar contenido del popup si está abierto
     if (m.isPopupOpen && m.isPopupOpen()) {
       m.setPopupContent(buildPopupHTML(sed));
     }
   }
+}
+
+function highlightMarker(id) {
+  if (state.highlightedId && state.highlightedId !== id) {
+    unhighlightMarker();
+  }
+  state.highlightedId = id;
+  const m = state.markers.get(id);
+  if (!m) return;
+  const sed = state.dataset.find(s => s.id === id);
+
+  if (m.setIcon) {
+    const el = m.getElement();
+    if (el) {
+      const wrap = el.querySelector('.m-wrap');
+      if (wrap) {
+        wrap.classList.add('hl');
+        let pulse = wrap.querySelector('.m-pulse');
+        if (!pulse) {
+          pulse = document.createElement('div');
+          pulse.className = 'm-pulse';
+          pulse.style.cssText = `background:${sed ? sed.color : '#8b5cf6'}`;
+          wrap.insertBefore(pulse, wrap.firstChild);
+        }
+      }
+    }
+  } else {
+    m.setStyle({
+      radius: 8, color: '#fff', weight: 2, fillOpacity: 1
+    });
+  }
+}
+
+function unhighlightMarker() {
+  if (!state.highlightedId) return;
+  const id = state.highlightedId;
+  const m = state.markers.get(id);
+  if (m) {
+    const sed = state.dataset.find(s => s.id === id);
+    const sel = state.selectedSeds.has(id);
+    if (m.setIcon) {
+      const el = m.getElement();
+      if (el) {
+        const wrap = el.querySelector('.m-wrap');
+        if (wrap) {
+          wrap.classList.remove('hl');
+          if (!sel) {
+            const pulse = wrap.querySelector('.m-pulse');
+            if (pulse) pulse.remove();
+          }
+        }
+      }
+    } else {
+      m.setStyle({
+        radius: sel ? 8 : 5,
+        color: sel ? '#fff' : (sed ? sed.color : '#8b5cf6'),
+        weight: sel ? 2 : 1,
+        fillOpacity: sel ? 1 : 0.7
+      });
+    }
+  }
+  state.highlightedId = null;
 }
 
 // ==================== BINARY MASK INPUT ====================
