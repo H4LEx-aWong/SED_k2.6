@@ -383,6 +383,9 @@
   .sheet.open{transform:translateY(0);}
   .sheet-handle{width:40px; height:4px; background:var(--text-muted); border-radius:2px; margin:12px auto; opacity:0.4; cursor:pointer;}
   .sheet-h{padding:0 20px 16px; display:flex; align-items:center; justify-content:space-between;}
+  .sheet-close{width:32px;height:32px;border-radius:50%;background:var(--glass-bg-light);border:1px solid var(--glass-border);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all 0.2s ease;-webkit-appearance:none;backdrop-filter:blur(10px);}
+  .sheet-close:hover{background:var(--glass-bg-hover);border-color:var(--glass-border-hover);color:var(--text-primary);}
+  .sheet-close:active{transform:scale(0.9);}
   .sheet-title{font-size:20px; font-weight:700;}
   .sheet-count{background:linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; box-shadow:0 4px 15px rgba(168,85,247,0.3);}
 
@@ -746,8 +749,11 @@
   <div class="sheet" id="sheet">
     <div class="sheet-handle" onclick="toggleSheet()"></div>
     <div class="sheet-h">
-      <div class="sheet-title">📍 Subestaciones</div>
-      <div class="sheet-count" id="sheetC">0</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="sheet-title">📍 Subestaciones</div>
+        <div class="sheet-count" id="sheetC">0</div>
+      </div>
+      <button class="sheet-close" onclick="closeSheet()" title="Cerrar">✕</button>
     </div>
     <div class="search-wrap">
       <div class="search-box" id="searchBox">
@@ -1978,6 +1984,11 @@ function showToast(msg, icon) {
 function toggleSheet() {
   state.isSheetOpen = !state.isSheetOpen;
   document.getElementById('sheet').classList.toggle('open', state.isSheetOpen);
+}
+
+function closeSheet() {
+  state.isSheetOpen = false;
+  document.getElementById('sheet').classList.remove('open');
 }
 
 // Touch handling for sheet
