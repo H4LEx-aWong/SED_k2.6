@@ -268,7 +268,6 @@
   }
   .leaflet-control-zoom a:hover{background:var(--glass-bg-hover) !important; color:var(--text-primary) !important;}
 
-  /* TOOLTIP personalizado para labels en Canvas */
   .leaflet-tooltip.sed-label {
     background: rgba(15,15,35,0.9) !important;
     backdrop-filter: blur(10px) !important;
@@ -300,7 +299,6 @@
   .popup-btn-s{background:var(--glass-bg-light); color:var(--text-secondary); border:1px solid var(--glass-border); backdrop-filter:blur(10px);}
   .popup-btn:active{transform:scale(0.96);}
 
-  /* Markers optimizados - SOLO para seleccionados/zoom alto */
   .m-wrap{position:relative; width:36px; height:36px; will-change:transform;}
   .m-pin{width:36px; height:36px; border-radius:50% 50% 50% 0; position:absolute; transform:rotate(-45deg); left:50%; top:50%; margin:-18px 0 0 -18px; box-shadow:0 4px 15px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; transition:transform 0.3s ease;}
   .m-pin::after{content:''; width:20px; height:20px; margin:7px 0 0 7px; background:var(--bg-deep); position:absolute; border-radius:50%;}
@@ -566,6 +564,19 @@
   .modal-b{flex:1; overflow-y:auto; padding:20px; scrollbar-width:none;}
   .modal-b::-webkit-scrollbar{display:none;}
 
+  /* GPS Manual Modal */
+  .gps-manual-row{display:flex; gap:10px; margin-bottom:12px;}
+  .gps-manual-input{
+    flex:1; padding:12px 14px; border-radius:var(--radius-xs);
+    background:rgba(0,0,0,0.3); border:1px solid var(--glass-border);
+    color:var(--text-primary); font-size:14px; outline:none;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .gps-manual-input:focus{border-color:rgba(0,245,255,0.4);}
+  .gps-manual-input::placeholder{color:var(--text-muted);}
+  .gps-hint{font-size:11px; color:var(--text-muted); margin-bottom:16px; line-height:1.5;}
+  .gps-hint strong{color:var(--accent-cyan);}
+
   .r-card{padding:16px; margin-bottom:12px; border-radius:var(--radius-sm); display:flex; align-items:center; gap:14px; animation:slideUp 0.4s ease forwards; opacity:0; background:var(--glass-bg-light); backdrop-filter:blur(16px); border:1px solid var(--glass-border);}
   .r-num{width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--accent-purple), var(--accent-blue)); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; box-shadow:0 4px 15px rgba(168,85,247,0.3);}
   .r-info{flex:1;}
@@ -768,6 +779,7 @@
     </div>
   </div>
 
+  <!-- Route Modal -->
   <div class="modal-o" id="routeModal">
     <div class="modal-c">
       <div class="modal-h">
@@ -775,6 +787,34 @@
         <button class="modal-x" onclick="closeRouteModal()">✕</button>
       </div>
       <div class="modal-b" id="routeList"></div>
+    </div>
+  </div>
+
+  <!-- GPS Manual Modal -->
+  <div class="modal-o" id="gpsModal">
+    <div class="modal-c">
+      <div class="modal-h">
+        <div class="modal-t">📍 Ubicación Manual</div>
+        <button class="modal-x" onclick="closeGpsModal()">✕</button>
+      </div>
+      <div class="modal-b">
+        <div class="gps-hint">
+          <strong>⚠️ GPS bloqueado</strong><br>
+          Tu navegador bloqueó el acceso a la ubicación. Puedes:<br>
+          • Habilitar el permiso en la configuración del navegador<br>
+          • Ingresar coordenadas manualmente aquí abajo
+        </div>
+        <div class="gps-manual-row">
+          <input type="text" class="gps-manual-input" id="gpsLat" placeholder="Latitud" value="-11.2">
+          <input type="text" class="gps-manual-input" id="gpsLng" placeholder="Longitud" value="-77.0">
+        </div>
+        <button class="act-btn act-btn-p" style="width:100%;justify-content:center;margin-bottom:10px" onclick="setManualLocation()">
+          <span>📍</span><span>Usar estas coordenadas</span>
+        </button>
+        <button class="act-btn act-btn-s" style="width:100%;justify-content:center" onclick="useDefaultLocation()">
+          <span>🎯</span><span>Usar ubicación por defecto (Lima)</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -842,8 +882,8 @@ function buildPopupHTML(sed) {
       <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-cyan)">↗</div><div><div style="font-weight:600">Coordenadas</div><div style="color:var(--text-muted);font-size:11px">${sed.latitud.toFixed(5)}, ${sed.longitud.toFixed(5)}</div></div></div>
     </div>
     <div class="popup-actions">
-      <button class="popup-btn ${isSel ? 'popup-btn-p' : 'popup-btn-s'}" onclick="toggleFromPopup('${sed.id}')">${isSel ? '✓ Seleccionada' : '☐ Seleccionar'}</button>
-      <button class="popup-btn popup-btn-p" onclick="openMaps('${sed.id}')">🗺 Maps</button>
+      <button class="popup-btn ${isSel ? 'popup-btn-p' : 'popup-btn-s'}" onclick="event.stopPropagation();toggleFromPopup('${sed.id}')">${isSel ? '✓ Seleccionada' : '☐ Seleccionar'}</button>
+      <button class="popup-btn popup-btn-p" onclick="event.stopPropagation();openMaps('${sed.id}')">🗺 Maps</button>
     </div>`;
 }
 
@@ -874,8 +914,7 @@ function renderMarkers() {
   const useCanvas = state.filteredSeds.length > maxDivMarkers || zoom < 13;
 
   if (useCanvas) {
-    // Modo Canvas: círculos + tooltip con nombre + popup con ficha
-    const showLabels = zoom >= 11; // Solo mostrar labels en zoom medio-alto
+    const showLabels = zoom >= 11;
     state.filteredSeds.forEach(sed => {
       const isSel = state.selectedSeds.has(sed.id);
       const circle = L.circleMarker([sed.latitud, sed.longitud], {
@@ -887,7 +926,6 @@ function renderMarkers() {
         fillOpacity: isSel ? 1 : 0.7
       });
 
-      // TOOLTIP (etiqueta con nombre) - visible al pasar el dedo/mouse
       if (showLabels) {
         circle.bindTooltip(sed.nombre, {
           permanent: false,
@@ -898,7 +936,6 @@ function renderMarkers() {
         });
       }
 
-      // POPUP (ficha completa al hacer click) - con cache lazy
       let popupCache = null;
       circle.bindPopup('', { closeButton: false, offset: [0, -5] });
       circle.on('popupopen', function() {
@@ -913,7 +950,6 @@ function renderMarkers() {
       state.markers.set(sed.id, circle);
     });
   } else {
-    // Modo DivIcon: pins glass completos
     state.filteredSeds.forEach(sed => {
       const m = createDivMarker(sed, state.selectedSeds.has(sed.id));
       m.addTo(state.map);
@@ -943,26 +979,54 @@ function createDivMarker(sed, isSelected) {
   return marker;
 }
 
+// ==================== updateMarker CORREGIDO: NO destruye el popup ====================
 function updateMarker(sedId) {
   const m = state.markers.get(sedId);
   if (!m) return;
   const sed = state.dataset.find(s => s.id === sedId);
   const sel = state.selectedSeds.has(sedId);
+
   if (m.setIcon) {
-    // Es DivIcon
-    const pulseHtml = sel ? `<div class="m-pulse" style="background:${sed.color}"></div>` : '';
-    const html = `<div class="m-wrap ${sel ? 'sel' : ''}">${pulseHtml}<div class="m-pin" style="background:${sed.color}"><div class="m-icon">⚡</div></div></div>`;
-    m.setIcon(L.divIcon({ html, className: 'custom-div-icon', iconSize: [36, 36], iconAnchor: [18, 36] }));
+    // Es DivIcon - actualizar DOM directamente SIN recrear el icono (eso destruye el popup)
+    const el = m.getElement();
+    if (el) {
+      const wrap = el.querySelector('.m-wrap');
+      if (wrap) {
+        // Toggle clase .sel
+        wrap.classList.toggle('sel', sel);
+        // Manejar el pulse: agregar o quitar según estado
+        let pulse = wrap.querySelector('.m-pulse');
+        if (sel && !pulse) {
+          pulse = document.createElement('div');
+          pulse.className = 'm-pulse';
+          pulse.style.cssText = `background:${sed.color}`;
+          wrap.insertBefore(pulse, wrap.firstChild);
+        } else if (!sel && pulse) {
+          pulse.remove();
+        }
+      }
+    } else {
+      // El elemento no está en el DOM, recrear es seguro
+      const pulseHtml = sel ? `<div class="m-pulse" style="background:${sed.color}"></div>` : '';
+      const html = `<div class="m-wrap ${sel ? 'sel' : ''}">${pulseHtml}<div class="m-pin" style="background:${sed.color}"><div class="m-icon">⚡</div></div></div>`;
+      m.setIcon(L.divIcon({ html, className: 'custom-div-icon', iconSize: [36, 36], iconAnchor: [18, 36] }));
+    }
+    // Actualizar contenido del popup si está abierto
+    if (m.isPopupOpen && m.isPopupOpen()) {
+      m.setPopupContent(buildPopupHTML(sed));
+    }
   } else {
-    // Es canvas circle
+    // Es canvas circle - solo actualizar estilo
     m.setStyle({
       radius: sel ? 8 : 5,
       color: sel ? '#fff' : sed.color,
       weight: sel ? 2 : 1,
       fillOpacity: sel ? 1 : 0.7
     });
-    // Invalidar cache del popup para que se regenere con el nuevo estado
-    m._popupCache = null;
+    // Actualizar contenido del popup si está abierto
+    if (m.isPopupOpen && m.isPopupOpen()) {
+      m.setPopupContent(buildPopupHTML(sed));
+    }
   }
 }
 
@@ -1473,10 +1537,17 @@ function toggleSED(id) {
   updateSelectionUI();
 }
 
+// ==================== toggleFromPopup CORREGIDO: NO cierra el popup ====================
 function toggleFromPopup(id) {
   toggleSED(id);
   const m = state.markers.get(id);
-  if (m) { m.closePopup(); setTimeout(() => m.openPopup(), 100); }
+  if (m) {
+    const sed = state.dataset.find(s => s.id === id);
+    if (sed) {
+      // Actualizar el contenido del popup directamente SIN cerrarlo
+      m.setPopupContent(buildPopupHTML(sed));
+    }
+  }
 }
 
 function flyTo(id) {
@@ -1613,10 +1684,35 @@ function openFullRoute() {
   window.open(url, '_blank');
 }
 
-// ==================== GPS ====================
+// ==================== GPS ROBUSTO: manejo de permisos + manual ====================
 function locateUser() {
-  if (!navigator.geolocation) { showToast('GPS no soportado', '⚠️'); return; }
+  if (!navigator.geolocation) {
+    showToast('Tu navegador no soporta GPS', '⚠️');
+    openGpsModal();
+    return;
+  }
+
   showToast('Detectando ubicación...', '📍');
+
+  // Intentar detectar si el permiso ya fue denegado
+  if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
+      if (permissionStatus.state === 'denied') {
+        showToast('GPS bloqueado. Toca para ingresar manualmente', '⚠️');
+        setTimeout(openGpsModal, 1500);
+        return;
+      }
+      requestGeolocation();
+    }).catch(() => {
+      // Si permissions.query falla, intentar directamente
+      requestGeolocation();
+    });
+  } else {
+    requestGeolocation();
+  }
+}
+
+function requestGeolocation() {
   navigator.geolocation.getCurrentPosition(
     pos => {
       state.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
@@ -1624,9 +1720,50 @@ function locateUser() {
       renderSEDList();
       showToast('Ubicación detectada', '✓');
     },
-    err => { showToast('Error GPS: ' + err.message, '⚠️'); },
-    { enableHighAccuracy: true, timeout: 15000 }
+    err => {
+      let msg = 'Error GPS';
+      if (err.code === 1) {
+        msg = 'GPS bloqueado por permisos';
+        setTimeout(openGpsModal, 1000);
+      } else if (err.code === 2) {
+        msg = 'No se pudo obtener posición';
+      } else if (err.code === 3) {
+        msg = 'GPS tardó demasiado';
+      }
+      showToast(msg, '⚠️');
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
   );
+}
+
+function openGpsModal() {
+  document.getElementById('gpsModal').classList.add('on');
+}
+
+function closeGpsModal() {
+  document.getElementById('gpsModal').classList.remove('on');
+}
+
+function setManualLocation() {
+  const lat = parseFloat(document.getElementById('gpsLat').value);
+  const lng = parseFloat(document.getElementById('gpsLng').value);
+  if (isNaN(lat) || isNaN(lng)) {
+    showToast('Coordenadas inválidas', '⚠️');
+    return;
+  }
+  state.userLocation = { lat, lng };
+  addUserMarker();
+  renderSEDList();
+  closeGpsModal();
+  showToast('Ubicación manual establecida', '✓');
+}
+
+function useDefaultLocation() {
+  state.userLocation = { lat: -11.2, lng: -77.0 };
+  addUserMarker();
+  renderSEDList();
+  closeGpsModal();
+  showToast('Ubicación por defecto (Lima)', '✓');
 }
 
 // ==================== UTILS ====================
