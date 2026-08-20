@@ -372,7 +372,7 @@
     border-radius:var(--radius) var(--radius) 0 0;
     transform:translateY(calc(100% - 80px));
     transition:transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    max-height:85vh; display:flex; flex-direction:column;
+    max-height:65vh; display:flex; flex-direction:column;
     background:var(--glass-bg);
     backdrop-filter:blur(30px) saturate(180%);
     -webkit-backdrop-filter:blur(30px) saturate(180%);
@@ -381,8 +381,10 @@
     box-shadow:var(--glass-shadow-lg);
   }
   .sheet.open{transform:translateY(0);}
+  .sheet-backdrop{position:fixed; inset:0; z-index:1999; background:rgba(0,0,0,0.4); opacity:0; pointer-events:none; transition:opacity 0.3s ease;}
+  .sheet-backdrop.on{opacity:1; pointer-events:all;}
   .sheet-handle{width:40px; height:4px; background:var(--text-muted); border-radius:2px; margin:12px auto; opacity:0.4; cursor:pointer;}
-  .sheet-h{padding:0 20px 16px; display:flex; align-items:center; justify-content:space-between;}
+  .sheet-h{padding:0 20px 16px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; background:var(--glass-bg); backdrop-filter:blur(20px); border-bottom:1px solid var(--glass-border); margin:0 -1px; padding-top:12px;}
   .sheet-close{width:32px;height:32px;border-radius:50%;background:var(--glass-bg-light);border:1px solid var(--glass-border);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;transition:all 0.2s ease;-webkit-appearance:none;backdrop-filter:blur(10px);}
   .sheet-close:hover{background:var(--glass-bg-hover);border-color:var(--glass-border-hover);color:var(--text-primary);}
   .sheet-close:active{transform:scale(0.9);}
@@ -746,6 +748,7 @@
     </button>
   </div>
 
+  <div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheet()"></div>
   <div class="sheet" id="sheet">
     <div class="sheet-handle" onclick="toggleSheet()"></div>
     <div class="sheet-h">
@@ -1984,11 +1987,13 @@ function showToast(msg, icon) {
 function toggleSheet() {
   state.isSheetOpen = !state.isSheetOpen;
   document.getElementById('sheet').classList.toggle('open', state.isSheetOpen);
+  document.getElementById('sheetBackdrop').classList.toggle('on', state.isSheetOpen);
 }
 
 function closeSheet() {
   state.isSheetOpen = false;
   document.getElementById('sheet').classList.remove('open');
+  document.getElementById('sheetBackdrop').classList.remove('on');
 }
 
 // Touch handling for sheet
@@ -2015,6 +2020,7 @@ handle.addEventListener('touchend', e => {
   if (Math.abs(dy) > 40) {
     state.isSheetOpen = dy < 0;
     sheet.classList.toggle('open', state.isSheetOpen);
+    document.getElementById('sheetBackdrop').classList.toggle('on', state.isSheetOpen);
   }
 });
 
