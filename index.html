@@ -268,6 +268,25 @@
   }
   .leaflet-control-zoom a:hover{background:var(--glass-bg-hover) !important; color:var(--text-primary) !important;}
 
+  /* TOOLTIP personalizado para labels en Canvas */
+  .leaflet-tooltip.sed-label {
+    background: rgba(15,15,35,0.9) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 8px !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 4px 10px !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+    white-space: nowrap !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+  .leaflet-tooltip.sed-label::before {
+    border-top-color: rgba(15,15,35,0.9) !important;
+  }
+
   .popup-h{padding:16px; background:linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); border-bottom:1px solid var(--glass-border);}
   .popup-badge{display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; margin-bottom:8px; backdrop-filter:blur(10px);}
   .popup-title{font-size:15px; font-weight:700; margin-bottom:3px;}
@@ -808,6 +827,26 @@ function generateDeviceId() {
   return id;
 }
 
+// ==================== POPUP BUILDER (compartido) ====================
+function buildPopupHTML(sed) {
+  const isSel = state.selectedSeds.has(sed.id);
+  return `
+    <div class="popup-h">
+      <div class="popup-badge" style="background:${sed.color}20;color:${sed.color}">⚡ ${sed.tipo}</div>
+      <div class="popup-title">${sed.nombre}</div>
+      <div class="popup-code">${sed.codigo}</div>
+    </div>
+    <div class="popup-body">
+      <div class="popup-row"><div class="popup-row-icon">📍</div><div><div style="font-weight:600">Ubicación</div><div style="color:var(--text-muted);font-size:11px">${sed.direccion || 'Sin dirección'}</div></div></div>
+      <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-orange)">⚡</div><div><div style="font-weight:600">Potencia</div><div style="color:var(--text-muted);font-size:11px">${sed.potencia_kw} kW</div></div></div>
+      <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-cyan)">↗</div><div><div style="font-weight:600">Coordenadas</div><div style="color:var(--text-muted);font-size:11px">${sed.latitud.toFixed(5)}, ${sed.longitud.toFixed(5)}</div></div></div>
+    </div>
+    <div class="popup-actions">
+      <button class="popup-btn ${isSel ? 'popup-btn-p' : 'popup-btn-s'}" onclick="toggleFromPopup('${sed.id}')">${isSel ? '✓ Seleccionada' : '☐ Seleccionar'}</button>
+      <button class="popup-btn popup-btn-p" onclick="openMaps('${sed.id}')">🗺 Maps</button>
+    </div>`;
+}
+
 // ==================== MARKERS OPTIMIZADOS (Canvas + Div híbrido) ====================
 let _canvasLayerGroup = null;
 let _selectedMarker = null;
@@ -835,6 +874,8 @@ function renderMarkers() {
   const useCanvas = state.filteredSeds.length > maxDivMarkers || zoom < 13;
 
   if (useCanvas) {
+    // Modo Canvas: círculos + tooltip con nombre + popup con ficha
+    const showLabels = zoom >= 11; // Solo mostrar labels en zoom medio-alto
     state.filteredSeds.forEach(sed => {
       const isSel = state.selectedSeds.has(sed.id);
       const circle = L.circleMarker([sed.latitud, sed.longitud], {
@@ -845,14 +886,34 @@ function renderMarkers() {
         opacity: 0.9,
         fillOpacity: isSel ? 1 : 0.7
       });
+
+      // TOOLTIP (etiqueta con nombre) - visible al pasar el dedo/mouse
+      if (showLabels) {
+        circle.bindTooltip(sed.nombre, {
+          permanent: false,
+          direction: 'top',
+          offset: [0, -8],
+          className: 'sed-label',
+          opacity: 1
+        });
+      }
+
+      // POPUP (ficha completa al hacer click) - con cache lazy
+      let popupCache = null;
+      circle.bindPopup('', { closeButton: false, offset: [0, -5] });
+      circle.on('popupopen', function() {
+        if (!popupCache) popupCache = buildPopupHTML(sed);
+        circle.setPopupContent(popupCache);
+      });
+
       circle.on('click', () => {
         flyTo(sed.id);
-        toggleSED(sed.id);
       });
       circle.addTo(_canvasLayerGroup);
       state.markers.set(sed.id, circle);
     });
   } else {
+    // Modo DivIcon: pins glass completos
     state.filteredSeds.forEach(sed => {
       const m = createDivMarker(sed, state.selectedSeds.has(sed.id));
       m.addTo(state.map);
@@ -873,22 +934,7 @@ function createDivMarker(sed, isSelected) {
       marker.setPopupContent(popupCache);
       return;
     }
-    const isSel = state.selectedSeds.has(sed.id);
-    popupCache = `
-      <div class="popup-h">
-        <div class="popup-badge" style="background:${sed.color}20;color:${sed.color}">⚡ ${sed.tipo}</div>
-        <div class="popup-title">${sed.nombre}</div>
-        <div class="popup-code">${sed.codigo}</div>
-      </div>
-      <div class="popup-body">
-        <div class="popup-row"><div class="popup-row-icon">📍</div><div><div style="font-weight:600">Ubicación</div><div style="color:var(--text-muted);font-size:11px">${sed.direccion || 'Sin dirección'}</div></div></div>
-        <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-orange)">⚡</div><div><div style="font-weight:600">Potencia</div><div style="color:var(--text-muted);font-size:11px">${sed.potencia_kw} kW</div></div></div>
-        <div class="popup-row"><div class="popup-row-icon" style="color:var(--accent-cyan)">↗</div><div><div style="font-weight:600">Coordenadas</div><div style="color:var(--text-muted);font-size:11px">${sed.latitud.toFixed(5)}, ${sed.longitud.toFixed(5)}</div></div></div>
-      </div>
-      <div class="popup-actions">
-        <button class="popup-btn ${isSel ? 'popup-btn-p' : 'popup-btn-s'}" onclick="toggleFromPopup('${sed.id}')">${isSel ? '✓ Seleccionada' : '☐ Seleccionar'}</button>
-        <button class="popup-btn popup-btn-p" onclick="openMaps('${sed.id}')">🗺 Maps</button>
-      </div>`;
+    popupCache = buildPopupHTML(sed);
     marker.setPopupContent(popupCache);
   });
 
@@ -903,16 +949,20 @@ function updateMarker(sedId) {
   const sed = state.dataset.find(s => s.id === sedId);
   const sel = state.selectedSeds.has(sedId);
   if (m.setIcon) {
+    // Es DivIcon
     const pulseHtml = sel ? `<div class="m-pulse" style="background:${sed.color}"></div>` : '';
     const html = `<div class="m-wrap ${sel ? 'sel' : ''}">${pulseHtml}<div class="m-pin" style="background:${sed.color}"><div class="m-icon">⚡</div></div></div>`;
     m.setIcon(L.divIcon({ html, className: 'custom-div-icon', iconSize: [36, 36], iconAnchor: [18, 36] }));
   } else {
+    // Es canvas circle
     m.setStyle({
       radius: sel ? 8 : 5,
       color: sel ? '#fff' : sed.color,
       weight: sel ? 2 : 1,
       fillOpacity: sel ? 1 : 0.7
     });
+    // Invalidar cache del popup para que se regenere con el nuevo estado
+    m._popupCache = null;
   }
 }
 
